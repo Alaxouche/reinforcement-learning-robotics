@@ -1,86 +1,86 @@
-# Projet RL — Apprentissage par renforcement appliqué à la robotique
+# Labyrinth 3x3 Q-Learning
 
-Ce projet académique explore progressivement l'**apprentissage par renforcement** (Reinforcement Learning, RL), des premiers algorithmes tabulaires jusqu'à l'utilisation de réseaux de neurones et, à terme, à des applications en robotique.
+## Les fichiers
+ 
+- `labyrinthe.py` : la classe `Labyrinthe` (l'environnement). C'est le labyrinthe simple sans mur ni feu, et le modèle à suivre pour les autres.
+- `apprentissage.py` : la classe `QLearning` (l'apprentissage). Elle marche avec n'importe quel labyrinthe. Lancé directement, il affiche le tableau Q et le chemin trouvé.
+- `simulation.py` : une petite fenêtre Tkinter où on voit l'agent entraîné suivre son chemin, case par case.
 
-Le **labyrinthe** est notre premier environnement d'expérimentation, pas la finalité du projet. Nous séparons donc les environnements des algorithmes pour pouvoir comparer différentes méthodes sur un même problème.
+Les paramètres se donnent à la création de l'objet `QLearning`, par exemple `QLearning(lab, nb_episodes=2000, max_pas=200)`. Ceux qu'on ne donne pas gardent leur valeur par défaut :
 
-## Architecture actuelle
-
-```text
-qlearning-labyrinthe-3x3/
-├── src/
-│   ├── environnements/
-│   │   └── labyrinthe.py                # Grille, actions, transitions, récompenses
-│   ├── algorithmes/
-│   │   └── tabulaire/
-│   │       └── q_learning.py            # Q-learning avec table explicite
-│   └── visualisation/
-│       └── simulation_labyrinthe.py     # Animation Tkinter réutilisable
-├── experiences/
-│   └── q_learning_tabulaire/
-│       ├── entrainement.py              # Lance l'apprentissage 3 × 3
-│       └── simulation.py                # Lance la simulation du même exemple
-├── requirements.txt
-├── README.md
-└── .gitignore
-```
-
-Les répertoires Python utilisent les *namespace packages* de Python 3 : des fichiers `__init__.py` vides ne sont pas indispensables dans cette configuration. Lancer les commandes **depuis la racine du dépôt**.
-
-## Première phase : Q-learning tabulaire
-
-L'environnement initial est un labyrinthe carré **3 × 3, sans mur ni feu**. L'agent part de la case 0, cherche la dernière case et peut tenter de se déplacer en haut, en bas, à gauche ou à droite. Les actions qui sortent de la grille sont exclues de la liste des actions possibles : l'agent ne peut pas les choisir.
-
-| Événement | Récompense |
-|---|---:|
-| Arrivée | +1 |
-| Autre déplacement | −0,1 |
-
-L'algorithme apprend une **table** donnant une valeur pour chaque couple (état, action), à l'aide de la mise à jour de Bellman :
-
-```text
-Q(s,a) <- Q(s,a) + alpha * (r + gamma * max_a' Q(s',a') - Q(s,a))
-```
-
-L'état final n'a pas de valeur future. La sélection des actions utilise une stratégie **epsilon-greedy** avec décroissance de l'exploration.
-
-Les hyperparamètres sont indiqués explicitement dans chaque script d'expérience (et non fixés par défaut dans la classe `QLearning`). Dans cet exemple : `alpha=0.1`, `gamma=0.9`, `epsilon=1.0`, `epsilon_min=0.05`, `decroissance=0.99`, `nb_episodes=1000` et `max_pas=30`. L'environnement fournit `nb_etats`, `nb_actions`, `reset()`, `actions_possibles(etat)` et `step(action)`.
-
-## Installation
-
-Prérequis : Python 3 et Tkinter (généralement inclus dans Python sur Windows).
-
-```bash
-git clone https://github.com/Alaxouche/qlearning-labyrinthe-3x3.git
-cd qlearning-labyrinthe-3x3
-python -m pip install -r requirements.txt
-```
-
-## Exécution
-
-Entraîner l'agent, afficher sa table Q et son chemin :
-
-```bash
-python -m experiences.q_learning_tabulaire.entrainement
-```
-
-Afficher l'animation Tkinter de l'agent entraîné :
-
-```bash
-python -m experiences.q_learning_tabulaire.simulation
-```
-
-La fenêtre propose les boutons **Démarrer** et **Recommencer**.
-
-## Progression envisagée
-
-| Phase | Sujet | Statut |
+| Paramètre | Valeur | Rôle |
 |---|---|---|
-| 1 | Q-learning **tabulaire** sur labyrinthe simple | Première version disponible |
-| 2 | Environnements avec murs, feux, obstacles et mesures de performance | À développer |
-| 3 | **Deep Q-Network (DQN)** : un réseau de neurones approxime les valeurs `Q(s,a; θ)` à la place d'une table explicite | À développer |
-| 4 | Navigation dans des environnements plus complexes et robotique simulée | À développer |
+| `alpha` | 0.1 | vitesse d'apprentissage |
+| `gamma` | 0.9 | importance des récompenses futures |
+| `epsilon_debut` | 1.0 | exploration au début |
+| `epsilon_min` | 0.05 | exploration minimale |
+| `decroissance` | 0.99 | vitesse de baisse d'epsilon |
+| `nb_episodes` | 500 | nombre de parties d'entraînement |
+| `max_pas` | 50 | nombre de pas maximum par partie |
+| `graine` | 0 | pour avoir les mêmes résultats à chaque lancement |
 
-À mesure que le projet progressera, les nouveaux algorithmes seront ajoutés dans `src/algorithmes/` (par exemple `profond/dqn.py`) et leurs protocoles dans `experiences/`. **Aucun fichier DQN fictif n'est créé à ce stade.**
+Un grand labyrinthe demande plus d'épisodes et plus de pas par partie.
 
-> Le titre du projet a été élargi ; le nom et l'URL du dépôt GitHub restent inchangés tant que son propriétaire ne les modifie pas.
+## Choisir un labyrinthe
+
+`labyrinthe.py` propose trois labyrinthes prédéfinis :
+
+| Nom | Contenu |
+|---|---|
+| `simple_3x3` | grille 3 × 3 vide |
+| `murs_5x5` | grille 5 × 5 avec 6 murs |
+| `murs_feux_9x9` | grille 9 × 9 avec 27 murs et 5 feux |
+
+Les murs et les feux sont placés au hasard à chaque lancement, en gardant toujours un chemin sans feu jusqu'à la sortie. Un mur bloque l'agent comme un bord ; un feu donne une récompense de -1. Pour retrouver toujours le même labyrinthe, on donne une graine : `creer_labyrinthe("murs_5x5", graine=42)`.
+
+Pour changer de labyrinthe, il suffit de changer les deux lignes `lab = ...` et `qlearning = ...` en bas de `apprentissage.py` et en haut de `simulation.py`.
+
+## Ajouter un labyrinthe
+
+On crée une classe fille de `Labyrinthe` (comme `LabyrintheAleatoire`), puis on l'ajoute au dictionnaire `LABYRINTHES`. La classe `QLearning` n'utilise que :
+
+- les attributs `taille`, `nb_etats`, `depart`, `arrivee`, `actions`, `noms_actions` ;
+- les méthodes `etat_suivant(etat, action)` (la case où l'on arrive) et `recompense(etat)` (la récompense en arrivant sur cette case).
+
+La simulation utilise en plus les listes `murs` et `feux` (numéros de cases) pour les colorier.
+
+## Lancer le projet
+ 
+Il faut Python 3 avec `numpy` (Tkinter est fourni avec Python).
+ 
+```
+pip install numpy
+```
+ 
+Pour l'entraînement :
+ 
+```
+python apprentissage.py
+```
+ 
+Pour la simulation (elle affiche aussi le tableau Q) :
+ 
+```
+python simulation.py
+```
+ 
+Cliquez sur **Démarrer** pour lancer l'agent et sur **Recommencer** pour le remettre au départ. Pour quitter, fermez simplement la fenêtre. Sous Windows, elle s'ouvre parfois derrière l'éditeur.
+
+## Fonctionnement
+ 
+L'agent garde un tableau `Q` qui donne, pour chaque case et chaque direction (haut, bas, gauche, droite), une note : « est-ce que c'est une bonne idée d'aller par là ? ».
+ 
+À chaque déplacement, il met cette note à jour avec la formule du Q-learning :
+ 
+```
+Q(s, a) <- Q(s, a) + alpha * (r + gamma * max Q(s', .) - Q(s, a))
+```
+ 
+Les récompenses :
+- +1 quand il atteint la sortie ;
+- -0.1 pour chaque pas, pour qu'il cherche le chemin le plus court.
+Pour ne pas rester bloqué sur ses premières idées, l'agent explore parfois au hasard. C'est le paramètre `epsilon` : il vaut 1 au début (tout au hasard), puis il diminue à chaque épisode jusqu'à 0.05. Au début l'agent découvre, à la fin il exploite ce qu'il a appris.
+
+## Résultat
+ 
+Après 500 épisodes, l'agent trouve un chemin de 4 pas, le plus court possible, par exemple `0 -> 3 -> 4 -> 5 -> 8`. Dans la simulation, le score final est de 0.7 (trois pas à -0.1, puis +1 à l'arrivée).
