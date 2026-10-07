@@ -1,19 +1,18 @@
-from src.environnements.environnement import Environnement
+from src.environnements.environnement_discret import EnvironnementDiscret
 
 
-class Labyrinthe(Environnement):
+class Labyrinthe(EnvironnementDiscret):
     """Environnement concret : une grille carrée.
 
-    Labyrinthe hérite de la classe abstraite Environnement.
-    Il fournit donc les méthodes imposées par la classe mère :
-    reset(), actions_possibles() et step().
+    Cette classe ne contient que les règles propres au labyrinthe.
+    Tout ce qui est générique aux environnements discrets est hérité de
+    EnvironnementDiscret.
     """
 
     def __init__(self, taille=3):
-        """Crée un labyrinthe carré de taille x taille."""
         self.taille = taille
 
-        # La classe mère initialise les informations communes à tous les environnements.
+        # Le nombre d'états et d'actions est géré par la classe mère.
         super().__init__(
             nb_etats=taille * taille,
             nb_actions=4
@@ -22,24 +21,33 @@ class Labyrinthe(Environnement):
         self.depart = 0
         self.arrivee = self.nb_etats - 1
 
-        # 0=haut, 1=bas, 2=gauche, 3=droite
-        self.actions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        self.noms_actions = ["Haut", "Bas", "Gauche", "Droite"]
+        # Actions : 0=haut, 1=bas, 2=gauche, 3=droite.
+        self.actions = [
+            (-1, 0),
+            (1, 0),
+            (0, -1),
+            (0, 1)
+        ]
 
-        # Aucun obstacle pour ce premier environnement.
+        self.noms_actions = [
+            "Haut",
+            "Bas",
+            "Gauche",
+            "Droite"
+        ]
+
         self.murs = []
         self.feux = []
 
-        # État courant de l'environnement.
         self.etat = self.depart
 
     def reset(self):
-        """Remet le robot au départ et renvoie l'état initial."""
+        """Replace l'agent au départ."""
         self.etat = self.depart
         return self.etat
 
     def actions_possibles(self, etat):
-        """Renvoie les numéros des actions autorisées depuis un état."""
+        """Renvoie les actions autorisées depuis un état."""
         if etat == self.arrivee or etat in self.murs:
             return []
 
@@ -60,7 +68,7 @@ class Labyrinthe(Environnement):
         return possibles
 
     def etat_suivant(self, etat, action):
-        """Calcule l'état atteint après une action."""
+        """Calcule l'état obtenu après une action."""
         if action not in self.actions_possibles(etat):
             return etat
 
