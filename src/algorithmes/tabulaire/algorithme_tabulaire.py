@@ -1,16 +1,15 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
 import numpy as np
 
-from src.algorithmes.algorithme import AlgorithmeRL
 from src.environnements.environnement_discret import EnvironnementDiscret
 
 
-class AlgorithmeTabulaire(AlgorithmeRL, ABC):
-    """Classe mère des algorithmes tabulaires.
+class AlgorithmeTabulaire(ABC):
+    """Classe mère des algorithmes tabulaires sur environnement discret.
 
-    Elle factorise la table Q et les opérations qui sont communes aux
-    algorithmes tabulaires, sans imposer la règle d'apprentissage utilisée.
+    Elle factorise tout ce qui est commun aux algorithmes comme Q-learning
+    ou SARSA, sans imposer leur règle d'apprentissage.
     """
 
     def __init__(self, environnement, nb_episodes, max_pas):
@@ -19,12 +18,17 @@ class AlgorithmeTabulaire(AlgorithmeRL, ABC):
                 "Un algorithme tabulaire nécessite un EnvironnementDiscret."
             )
 
-        super().__init__(
-            environnement=environnement,
-            nb_episodes=nb_episodes,
-            max_pas=max_pas
-        )
+        if nb_episodes <= 0:
+            raise ValueError("nb_episodes doit être strictement positif.")
+        if max_pas <= 0:
+            raise ValueError("max_pas doit être strictement positif.")
 
+        self.env = environnement
+        self.nb_episodes = nb_episodes
+        self.max_pas = max_pas
+        self.recompenses = []
+
+        # Une ligne par état et une colonne par action.
         self.Q = np.zeros(
             (self.env.nb_etats, self.env.nb_actions),
             dtype=float
@@ -41,7 +45,7 @@ class AlgorithmeTabulaire(AlgorithmeRL, ABC):
         return int(actions[indice])
 
     def action_epsilon_greedy(self, etat, epsilon):
-        """Choisit une action selon une stratégie epsilon-greedy générique."""
+        """Choisit une action avec la stratégie epsilon-greedy."""
         actions = list(self.env.actions_possibles(etat))
 
         if not actions:
@@ -51,3 +55,13 @@ class AlgorithmeTabulaire(AlgorithmeRL, ABC):
             return int(np.random.choice(actions))
 
         return self.meilleure_action(etat)
+
+    @abstractmethod
+    def choisir_action(self, etat):
+        """Choisit l'action utilisée par l'algorithme concret."""
+        pass
+
+    @abstractmethod
+    def apprendre(self):
+        """Entraîne l'algorithme concret."""
+        pass
