@@ -1,22 +1,16 @@
-"""Crée l'environnement et l'agent, puis lance un entraînement Q-learning.
-
-Depuis la racine du projet :
-    py -m experiences.q_learning_tabulaire.entrainement
-    py -m experiences.q_learning_tabulaire.entrainement --visuel
-"""
+"""Création d'un environnement puis entraînement d'un agent Q-learning."""
 
 from src.environnements.labyrinthe import Labyrinthe
 from src.algorithmes.tabulaire.q_learning import QLearning
 
 
-def main(visuel=False):
-    """Construit l'agent ; entraîne normalement ou ouvre le suivi Tkinter."""
+def main():
+    """Construit le labyrinthe, l'agent, puis lance l'apprentissage."""
 
-    # 1. Création de l'environnement dans lequel l'agent va apprendre.
+    # Environnement concret : Labyrinthe hérite de Environnement.
     lab = Labyrinthe(taille=3)
 
-    # 2. Création de l'agent : les hyperparamètres de cette expérience
-    # sont définis ici et non dans la classe générique QLearning.
+    # Les hyperparamètres appartiennent à l'expérience, pas à l'environnement.
     agent = QLearning(
         environnement=lab,
         alpha=0.1,
@@ -28,19 +22,10 @@ def main(visuel=False):
         max_pas=30
     )
 
-    # 3. Un seul jeu d'hyperparamètres pour les deux modes.
-    if visuel:
-        # La fenêtre gère elle-même les pas de l'entraînement en direct.
-        from src.visualisation.simulation_labyrinthe import lancer_simulation
-        lancer_simulation(lab, agent)
-    else:
-        # Mode classique, sans interface graphique.
-        agent.apprendre()
+    agent.apprendre()
 
-    # Permet de récupérer l'agent entraîné si main() est appelée ailleurs.
     return agent
 
 
 if __name__ == "__main__":
-    import sys
-    main(visuel="--visuel" in sys.argv)
+    main()
