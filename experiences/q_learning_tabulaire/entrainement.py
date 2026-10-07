@@ -1,18 +1,18 @@
-"""Création d'un environnement puis entraînement d'un agent Q-learning."""
+"""Expérience concrète : Q-learning tabulaire sur un labyrinthe."""
 
 from src.environnements.labyrinthe import Labyrinthe
 from src.algorithmes.tabulaire.q_learning import QLearning
 
 
 def main():
-    """Construit le labyrinthe, l'agent, puis lance l'apprentissage."""
+    """Assemble un environnement concret et un algorithme concret."""
 
-    # Environnement concret : Labyrinthe hérite de Environnement.
-    lab = Labyrinthe(taille=3)
+    # L'expérience choisit ici UN environnement parmi tous ceux disponibles.
+    environnement = Labyrinthe(taille=3)
 
-    # Les hyperparamètres appartiennent à l'expérience, pas à l'environnement.
-    agent = QLearning(
-        environnement=lab,
+    # L'expérience choisit ici UN algorithme parmi tous ceux disponibles.
+    algorithme = QLearning(
+        environnement=environnement,
         alpha=0.1,
         gamma=0.9,
         epsilon=1.0,
@@ -22,9 +22,9 @@ def main():
         max_pas=30
     )
 
-    agent.apprendre()
+    algorithme.apprendre()
 
-    return agent
+    return algorithme
 
 
 if __name__ == "__main__":
