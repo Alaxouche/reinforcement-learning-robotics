@@ -1,8 +1,8 @@
-# Projet RL — Q-learning tabulaire sur environnement discret
+# Projet RL — Q-learning sur environnement discret
 
-Le projet est volontairement généralisé **dans le cadre discret**.
+Le projet généralise uniquement les **environnements discrets**.
 
-L'objectif est de pouvoir ajouter plusieurs environnements discrets et plusieurs algorithmes tabulaires sans réécrire les parties communes.
+L'algorithme reste volontairement simple : il n'existe qu'une seule classe `QLearning`.
 
 ## Architecture
 
@@ -15,7 +15,6 @@ reinforcement-learning-robotics/
 │   │
 │   └── algorithmes/
 │       └── tabulaire/
-│           ├── algorithme_tabulaire.py
 │           └── q_learning.py
 │
 ├── experiences/
@@ -38,9 +37,9 @@ EnvironnementDiscret
 
 ### `EnvironnementDiscret`
 
-C'est la classe abstraite commune à tous les environnements discrets.
+C'est la classe abstraite commune aux environnements discrets.
 
-Elle stocke :
+Elle contient :
 
 - `nb_etats` ;
 - `nb_actions`.
@@ -51,73 +50,37 @@ Elle impose aux classes filles :
 - `actions_possibles(etat)` ;
 - `step(action)`.
 
-Ainsi, le Q-learning n'a pas besoin de connaître les règles particulières du labyrinthe.
-
 ### `Labyrinthe`
 
-`Labyrinthe` hérite de `EnvironnementDiscret`.
+`Labyrinthe` hérite de `EnvironnementDiscret` et définit seulement les règles propres à la grille :
 
-Il définit seulement ce qui est propre à une grille :
+- taille ;
+- départ et arrivée ;
+- déplacements ;
+- murs et feux ;
+- état suivant ;
+- récompenses.
 
-- la taille ;
-- le départ et l'arrivée ;
-- les déplacements ;
-- les murs et feux ;
-- l'état suivant ;
-- les récompenses.
+## Q-learning
 
-## Héritage des algorithmes
+Il n'y a pas de classe mère pour les algorithmes.
 
-```text
-AlgorithmeTabulaire
-        ↑
-        │
-     QLearning
-```
+La classe `QLearning` contient directement :
 
-### `AlgorithmeTabulaire`
-
-C'est la classe abstraite commune aux algorithmes tabulaires.
-
-Elle stocke et gère :
-
-- l'environnement discret ;
-- le nombre d'épisodes ;
-- le nombre maximal de pas ;
-- l'historique des récompenses ;
+- l'environnement ;
+- les hyperparamètres ;
 - la table `Q` ;
-- la recherche de la meilleure action ;
-- la stratégie epsilon-greedy.
-
-Elle impose :
-
-- `choisir_action(etat)` ;
-- `apprendre()`.
-
-Un futur algorithme tabulaire comme SARSA pourra donc réutiliser cette classe.
-
-### `QLearning`
-
-`QLearning` hérite de `AlgorithmeTabulaire`.
-
-Il contient uniquement les éléments propres au Q-learning :
-
-- `alpha` ;
-- `gamma` ;
-- `epsilon` ;
-- `epsilon_min` ;
-- la décroissance d'epsilon ;
-- la règle de mise à jour :
+- `meilleure_action()` ;
+- `choisir_action()` avec epsilon-greedy ;
+- `apprendre()` avec la mise à jour de Bellman.
 
 ```text
 Q(s,a) <- Q(s,a) + alpha * (r + gamma * max_a' Q(s',a') - Q(s,a))
 ```
 
-`QLearning` ne connaît pas la classe `Labyrinthe`. Il travaille avec n'importe quel objet qui hérite de `EnvironnementDiscret`.
+`QLearning` ne dépend pas de `Labyrinthe` : il accepte n'importe quel objet qui hérite de `EnvironnementDiscret`.
 
 ## Expérience actuelle
-
-Le fichier `experiences/q_learning_tabulaire/entrainement.py` assemble simplement un environnement et un algorithme :
 
 ```python
 environnement = Labyrinthe(taille=3)
@@ -136,21 +99,8 @@ algorithme = QLearning(
 algorithme.apprendre()
 ```
 
-Les hyperparamètres restent dans le fichier d'expérience.
-
-## Installation
-
-```bash
-git clone https://github.com/Alaxouche/reinforcement-learning-robotics.git
-cd reinforcement-learning-robotics
-git switch hammou-qlearning
-py -m pip install -r requirements.txt
-```
-
 ## Exécution
 
 ```bash
 py -m experiences.q_learning_tabulaire.entrainement
 ```
-
-Le programme entraîne actuellement l'algorithme sans interface graphique. Les tests seront ajoutés séparément.
