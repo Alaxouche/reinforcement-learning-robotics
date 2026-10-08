@@ -51,12 +51,15 @@ def main():
         score += recompense
 
         if termine:
-            # L'épisode peut se terminer de deux façons : l'arrivée ou un feu.
-            issue = "arrivée" if etat == lab.arrivee else "feu"
+            # Seule l'arrivée termine l'épisode.
+            issue = "arrivée"
             break
 
+    feux_traverses = sum(1 for case in chemin if case in lab.feux)
+
     print("\nChemin suivi :", " -> ".join(map(str, chemin)))
-    print(f"Pas : {len(chemin) - 1}    Score : {score:.2f}    Issue : {issue}")
+    print(f"Pas : {len(chemin) - 1}    Score : {score:.2f}    Issue : {issue}"
+          f"    Feux traversés : {feux_traverses}")
 
 
 # Ce bloc lance main() seulement si l'on exécute ce fichier comme programme.
