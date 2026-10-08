@@ -7,7 +7,7 @@ Le **labyrinthe** est notre premier environnement d'expérimentation, pas la fin
 ## Architecture actuelle
 
 ```text
-qlearning-labyrinthe-3x3/
+reinforcement-learning-robotics/
 ├── src/
 │   ├── environnements/
 │   │   └── labyrinthe.py                # Grille, actions, transitions, récompenses
@@ -18,8 +18,8 @@ qlearning-labyrinthe-3x3/
 │       └── simulation_labyrinthe.py     # Animation Tkinter réutilisable
 ├── experiences/
 │   └── q_learning_tabulaire/
-│       ├── entrainement.py              # Lance l'apprentissage 3 × 3
-│       └── simulation.py                # Lance la simulation du même exemple
+│       ├── entrainement.py              # Lance l'apprentissage
+│       └── simulation.py                # Lance la simulation
 ├── requirements.txt
 ├── README.md
 └── .gitignore
@@ -51,8 +51,8 @@ Les hyperparamètres sont indiqués explicitement dans chaque script d'expérien
 Prérequis : Python 3 et Tkinter (généralement inclus dans Python sur Windows).
 
 ```bash
-git clone https://github.com/Alaxouche/qlearning-labyrinthe-3x3.git
-cd qlearning-labyrinthe-3x3
+git clone https://github.com/Alaxouche/reinforcement-learning-robotics.git
+cd reinforcement-learning-robotics
 python -m pip install -r requirements.txt
 ```
 
@@ -82,5 +82,3 @@ La fenêtre propose les boutons **Démarrer** et **Recommencer**.
 | 4 | Navigation dans des environnements plus complexes et robotique simulée | À développer |
 
 À mesure que le projet progressera, les nouveaux algorithmes seront ajoutés dans `src/algorithmes/` (par exemple `profond/dqn.py`) et leurs protocoles dans `experiences/`. **Aucun fichier DQN fictif n'est créé à ce stade.**
-
-> Le titre du projet a été élargi ; le nom et l'URL du dépôt GitHub restent inchangés tant que son propriétaire ne les modifie pas.
