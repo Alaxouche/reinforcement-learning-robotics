@@ -10,7 +10,7 @@ reinforcement-learning-robotics/
 │   ├── environnements/
 │   │   ├── environnement_discret.py
 │   │   ├── labyrinthe.py
-│   │   └── labyrinthe_4x4.py
+│   │   └── labyrinthe_5x5.py
 │   │
 │   └── algorithmes/
 │       └── tabulaire/
@@ -28,20 +28,21 @@ EnvironnementDiscret
         ↑
     Labyrinthe
         ↑
-  Labyrinthe4x4
+  Labyrinthe5x5
 ```
 
 `EnvironnementDiscret` définit le contrat commun : nombre d'états, nombre d'actions, `reset()`, `actions_possibles()` et `step()`.
 
-`Labyrinthe` contient uniquement la mécanique commune aux labyrinthes : déplacements, limites de la grille, murs, calcul de l'état suivant, `reset()` et `step()`. La fonction `recompense(etat)` reste abstraite.
+`Labyrinthe` contient la mécanique commune aux labyrinthes : déplacements, limites de la grille, murs, calcul de l'état suivant, `reset()` et `step()`. La fonction `recompense(etat)` reste abstraite.
 
-Les états sont numérotés de gauche à droite et de bas en haut :
+Les états du labyrinthe actuel sont numérotés de gauche à droite et de haut en bas :
 
 ```text
-12  13  14  15
- 8   9  10  11
- 4   5   6   7
- 0   1   2   3
+ 0   1   2   3   4
+ 5   6   7   8   9
+10  11  12  13  14
+15  16  17  18  19
+20  21  22  23  24
 ```
 
 Les actions sont :
@@ -53,32 +54,26 @@ Les actions sont :
 3 = Droite
 ```
 
-## Labyrinthe 4 x 4
+## Labyrinthe 5 x 5
 
-`Labyrinthe4x4` définit la configuration concrète utilisée pour les essais :
+`Labyrinthe5x5` définit la configuration concrète utilisée pour les essais :
 
 ```text
 départ   : 0
-objectif : 15
-murs     : 5, 14
-feux     : 7, 9
+arrivée  : 24
+murs     : 3, 11, 13
+pièges   : 7, 17
 ```
 
-Récompenses :
+Récompenses actuellement utilisées :
 
 ```text
-déplacement normal : -0.1
-feu                : -10
-objectif           : +10
+case normale : -0.1
+piège        : -1.0
+arrivée      : +1.0
 ```
 
-Les murs sont infranchissables. Une action impossible n'est jamais choisie par le Q-learning et la Q-value correspondante reste donc à sa valeur initiale.
-
-Un chemin optimal attendu est :
-
-```text
-0 -> 1 -> 2 -> 6 -> 10 -> 11 -> 15
-```
+Les murs sont infranchissables. Les pièges restent accessibles mais donnent une récompense négative.
 
 ## Q-learning
 
