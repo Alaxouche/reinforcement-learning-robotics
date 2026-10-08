@@ -7,15 +7,15 @@ NOMS_ACTIONS = ["Haut", "Bas", "Gauche", "Droite"]
 
 # Recompenses, identiques pour tous les labyrinthes.
 RECOMPENSE_ARRIVEE = 1.0
-RECOMPENSE_FEU = -1.0
+RECOMPENSE_FEU = -10.0
 RECOMPENSE_PAS = -0.1
 
 
 class Labyrinthe(EnvironnementDiscret):
     """Grille carree avec des murs et des feux.
 
-    Regles : un mur n'est pas traversable ; un feu est accessible mais
-    termine l'episode avec -1 ; l'arrivee le termine avec +1 ; tout autre
+    Regles : un mur n'est pas traversable ; un feu se traverse mais coute
+    -10 ; seule l'arrivee termine l'episode, avec +1 ; tout autre
     deplacement coute -0.1.
 
     Les trois classes filles, en bas du fichier, ne font que choisir la
@@ -77,8 +77,12 @@ class Labyrinthe(EnvironnementDiscret):
         return None if case in self.murs else case
 
     def est_terminal(self, etat):
-        """Dit si l'episode s'arrete sur cette case (arrivee ou feu)."""
-        return etat == self.arrivee or etat in self.feux
+        """Dit si l'episode s'arrete sur cette case.
+
+        Seule l'arrivee termine l'episode : un feu coute cher, mais le robot
+        peut le traverser et continuer sa route.
+        """
+        return etat == self.arrivee
 
     def etat_suivant(self, etat, action):
         """Case atteinte, sans deplacer le robot ; meme case si action interdite."""
@@ -98,6 +102,9 @@ class Labyrinthe(EnvironnementDiscret):
     def chemin_existe(self):
         """Dit s'il existe un chemin evitant les murs ET les feux.
 
+        Les feux sont traversables, mais on exige qu'un chemin sans feu
+        existe : sinon la penalite serait inevitable et l'agent n'aurait
+        aucun choix a apprendre.
         Parcours en largeur : on explore les cases voisines de proche en proche.
         """
         a_explorer = [self.depart]
@@ -131,8 +138,9 @@ class Labyrinthe(EnvironnementDiscret):
 
         Exemple au coin haut gauche d'une grille vide : [1, 3] = bas, droite.
         """
-        # Aucune action depuis une case terminale, ni depuis un mur
-        # (le robot ne peut pas s'y trouver, mais la question peut etre posee).
+        # Aucune action depuis l'arrivee, ni depuis un mur (le robot ne peut
+        # pas s'y trouver, mais la question peut etre posee). Un feu, lui,
+        # est une case ordinaire : on peut en repartir.
         if self.est_terminal(etat) or etat in self.murs:
             return []
 
