@@ -10,7 +10,7 @@ reinforcement-learning-robotics/
 │   ├── environnements/
 │   │   ├── environnement_discret.py
 │   │   ├── labyrinthe.py
-│   │   └── labyrinthe_simple.py
+│   │   └── labyrinthe_4x4.py
 │   │
 │   └── algorithmes/
 │       └── tabulaire/
@@ -28,27 +28,61 @@ EnvironnementDiscret
         ↑
     Labyrinthe
         ↑
- LabyrintheSimple
+  Labyrinthe4x4
 ```
 
 `EnvironnementDiscret` définit le contrat commun : nombre d'états, nombre d'actions, `reset()`, `actions_possibles()` et `step()`.
 
-`Labyrinthe` est une classe de base pour les différents labyrinthes. Elle contient la mécanique commune : déplacements sur la grille, vérification des limites et des murs, calcul de l'état suivant, `reset()` et `step()`.
+`Labyrinthe` contient uniquement la mécanique commune aux labyrinthes : déplacements, limites de la grille, murs, calcul de l'état suivant, `reset()` et `step()`. La fonction `recompense(etat)` reste abstraite.
 
-La méthode `recompense(etat)` est abstraite dans `Labyrinthe`. Chaque labyrinthe concret doit donc définir sa propre fonction de récompense.
-
-`LabyrintheSimple` choisit actuellement une grille sans mur, un départ en case 0, une arrivée sur la dernière case et la récompense suivante :
+Les états sont numérotés de gauche à droite et de bas en haut :
 
 ```text
-arrivée        -> +1.0
-autre état     -> -0.1
+12  13  14  15
+ 8   9  10  11
+ 4   5   6   7
+ 0   1   2   3
 ```
 
-Ainsi, un futur labyrinthe pourra avoir d'autres murs et une autre fonction de récompense sans modifier `Labyrinthe` ni `QLearning`.
+Les actions sont :
+
+```text
+0 = Haut
+1 = Bas
+2 = Gauche
+3 = Droite
+```
+
+## Labyrinthe 4 x 4
+
+`Labyrinthe4x4` définit la configuration concrète utilisée pour les essais :
+
+```text
+départ   : 0
+objectif : 15
+murs     : 5, 14
+feux     : 7, 9
+```
+
+Récompenses :
+
+```text
+déplacement normal : -0.1
+feu                : -10
+objectif           : +10
+```
+
+Les murs sont infranchissables. Une action impossible n'est jamais choisie par le Q-learning et la Q-value correspondante reste donc à sa valeur initiale.
+
+Un chemin optimal attendu est :
+
+```text
+0 -> 1 -> 2 -> 6 -> 10 -> 11 -> 15
+```
 
 ## Q-learning
 
-`QLearning` reste une classe autonome. Elle utilise n'importe quel `EnvironnementDiscret` et contient directement la table Q, epsilon-greedy et la mise à jour de Bellman.
+`QLearning` reste une classe autonome et utilise n'importe quel `EnvironnementDiscret`.
 
 ```text
 Q(s,a) <- Q(s,a) + alpha * (r + gamma * max_a' Q(s',a') - Q(s,a))
