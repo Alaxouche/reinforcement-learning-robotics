@@ -33,13 +33,18 @@ EnvironnementDiscret
 
 `EnvironnementDiscret` définit le contrat commun : nombre d'états, nombre d'actions, `reset()`, `actions_possibles()` et `step()`.
 
-`Labyrinthe` contient la mécanique commune aux labyrinthes : déplacements dans une grille, vérification des limites, prise en compte des murs, calcul de l'état suivant et exécution d'une action.
+`Labyrinthe` est une classe de base pour les différents labyrinthes. Elle contient la mécanique commune : déplacements sur la grille, vérification des limites et des murs, calcul de l'état suivant, `reset()` et `step()`.
 
-Il ne décide pas qu'un labyrinthe particulier possède zéro mur : la liste des murs lui est fournie lors de sa construction.
+La méthode `recompense(etat)` est abstraite dans `Labyrinthe`. Chaque labyrinthe concret doit donc définir sa propre fonction de récompense.
 
-`LabyrintheSimple` est l'environnement concret actuellement utilisé. Il choisit une grille sans mur, un départ en case 0 et une arrivée sur la dernière case.
+`LabyrintheSimple` choisit actuellement une grille sans mur, un départ en case 0, une arrivée sur la dernière case et la récompense suivante :
 
-La notion de `feux` a été retirée tant qu'aucun comportement associé n'est implémenté.
+```text
+arrivée        -> +1.0
+autre état     -> -0.1
+```
+
+Ainsi, un futur labyrinthe pourra avoir d'autres murs et une autre fonction de récompense sans modifier `Labyrinthe` ni `QLearning`.
 
 ## Q-learning
 
