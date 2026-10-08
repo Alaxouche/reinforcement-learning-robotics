@@ -1,8 +1,6 @@
-# Projet RL — Q-learning sur environnement discret
+# Projet RL — Q-learning sur environnements discrets
 
-Le projet généralise uniquement les **environnements discrets**.
-
-L'algorithme reste volontairement simple : il n'existe qu'une seule classe `QLearning`.
+Le projet généralise les **environnements discrets** tout en gardant un seul algorithme : le Q-learning.
 
 ## Architecture
 
@@ -11,19 +9,16 @@ reinforcement-learning-robotics/
 ├── src/
 │   ├── environnements/
 │   │   ├── environnement_discret.py
-│   │   └── labyrinthe.py
+│   │   ├── labyrinthe.py
+│   │   └── labyrinthe_simple.py
 │   │
 │   └── algorithmes/
 │       └── tabulaire/
 │           └── q_learning.py
 │
-├── experiences/
-│   └── q_learning_tabulaire/
-│       └── entrainement.py
-│
-├── requirements.txt
-├── README.md
-└── .gitignore
+└── experiences/
+    └── q_learning_tabulaire/
+        └── entrainement.py
 ```
 
 ## Héritage des environnements
@@ -31,72 +26,27 @@ reinforcement-learning-robotics/
 ```text
 EnvironnementDiscret
         ↑
-        │
     Labyrinthe
+        ↑
+ LabyrintheSimple
 ```
 
-### `EnvironnementDiscret`
+`EnvironnementDiscret` définit le contrat commun : nombre d'états, nombre d'actions, `reset()`, `actions_possibles()` et `step()`.
 
-C'est la classe abstraite commune aux environnements discrets.
+`Labyrinthe` contient la mécanique commune aux labyrinthes : déplacements dans une grille, vérification des limites, prise en compte des murs, calcul de l'état suivant et exécution d'une action.
 
-Elle contient :
+Il ne décide pas qu'un labyrinthe particulier possède zéro mur : la liste des murs lui est fournie lors de sa construction.
 
-- `nb_etats` ;
-- `nb_actions`.
+`LabyrintheSimple` est l'environnement concret actuellement utilisé. Il choisit une grille sans mur, un départ en case 0 et une arrivée sur la dernière case.
 
-Elle impose aux classes filles :
-
-- `reset()` ;
-- `actions_possibles(etat)` ;
-- `step(action)`.
-
-### `Labyrinthe`
-
-`Labyrinthe` hérite de `EnvironnementDiscret` et définit seulement les règles propres à la grille :
-
-- taille ;
-- départ et arrivée ;
-- déplacements ;
-- murs et feux ;
-- état suivant ;
-- récompenses.
+La notion de `feux` a été retirée tant qu'aucun comportement associé n'est implémenté.
 
 ## Q-learning
 
-Il n'y a pas de classe mère pour les algorithmes.
-
-La classe `QLearning` contient directement :
-
-- l'environnement ;
-- les hyperparamètres ;
-- la table `Q` ;
-- `meilleure_action()` ;
-- `choisir_action()` avec epsilon-greedy ;
-- `apprendre()` avec la mise à jour de Bellman.
+`QLearning` reste une classe autonome. Elle utilise n'importe quel `EnvironnementDiscret` et contient directement la table Q, epsilon-greedy et la mise à jour de Bellman.
 
 ```text
 Q(s,a) <- Q(s,a) + alpha * (r + gamma * max_a' Q(s',a') - Q(s,a))
-```
-
-`QLearning` ne dépend pas de `Labyrinthe` : il accepte n'importe quel objet qui hérite de `EnvironnementDiscret`.
-
-## Expérience actuelle
-
-```python
-environnement = Labyrinthe(taille=3)
-
-algorithme = QLearning(
-    environnement=environnement,
-    alpha=0.1,
-    gamma=0.9,
-    epsilon=1.0,
-    epsilon_min=0.05,
-    decroissance=0.99,
-    nb_episodes=1000,
-    max_pas=30
-)
-
-algorithme.apprendre()
 ```
 
 ## Exécution
