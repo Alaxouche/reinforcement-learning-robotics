@@ -1,16 +1,14 @@
-"""Expérience concrète : Q-learning tabulaire sur un labyrinthe."""
+"""Expérience : Q-learning sur un labyrinthe simple."""
 
-from src.environnements.labyrinthe import Labyrinthe
+from src.environnements.labyrinthe_simple import LabyrintheSimple
 from src.algorithmes.tabulaire.q_learning import QLearning
 
 
 def main():
-    """Assemble un environnement concret et un algorithme concret."""
+    """Crée l'environnement puis entraîne le Q-learning."""
 
-    # L'expérience choisit ici UN environnement parmi tous ceux disponibles.
-    environnement = Labyrinthe(taille=3)
+    environnement = LabyrintheSimple(taille=3)
 
-    # L'expérience choisit ici UN algorithme parmi tous ceux disponibles.
     algorithme = QLearning(
         environnement=environnement,
         alpha=0.1,
