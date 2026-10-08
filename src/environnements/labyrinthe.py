@@ -2,24 +2,28 @@ from src.environnements.environnement_discret import EnvironnementDiscret
 
 
 class Labyrinthe(EnvironnementDiscret):
-    """Environnement concret : une grille carrée.
+    """Classe de base commune aux différents labyrinthes discrets.
 
-    Cette classe ne contient que les règles propres au labyrinthe.
-    Tout ce qui est générique aux environnements discrets est hérité de
-    EnvironnementDiscret.
+    Elle contient la mécanique commune :
+        - déplacements sur une grille carrée ;
+        - calcul des actions possibles ;
+        - calcul de l'état suivant ;
+        - reset et step.
+
+    La configuration concrète du labyrinthe est fournie par les classes filles.
     """
 
-    def __init__(self, taille=3):
+    def __init__(self, taille, depart, arrivee, murs):
         self.taille = taille
 
-        # Le nombre d'états et d'actions est géré par la classe mère.
         super().__init__(
             nb_etats=taille * taille,
             nb_actions=4
         )
 
-        self.depart = 0
-        self.arrivee = self.nb_etats - 1
+        self.depart = depart
+        self.arrivee = arrivee
+        self.murs = list(murs)
 
         # Actions : 0=haut, 1=bas, 2=gauche, 3=droite.
         self.actions = [
@@ -35,9 +39,6 @@ class Labyrinthe(EnvironnementDiscret):
             "Gauche",
             "Droite"
         ]
-
-        self.murs = []
-        self.feux = []
 
         self.etat = self.depart
 
