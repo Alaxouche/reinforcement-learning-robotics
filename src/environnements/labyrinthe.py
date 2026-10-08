@@ -6,13 +6,7 @@ from src.environnements.environnement_discret import EnvironnementDiscret
 class Labyrinthe(EnvironnementDiscret):
     """Classe de base commune aux différents labyrinthes discrets.
 
-    Les états d'une grille sont numérotés de gauche à droite et de bas en haut.
-
-    Exemple pour une grille 4 x 4 :
-        12  13  14  15
-         8   9  10  11
-         4   5   6   7
-         0   1   2   3
+    Les états sont numérotés de gauche à droite et de haut en bas.
 
     Cette classe contient uniquement la mécanique commune :
         - déplacements sur une grille carrée ;
@@ -37,10 +31,9 @@ class Labyrinthe(EnvironnementDiscret):
         self.murs = list(murs)
 
         # 0=haut, 1=bas, 2=gauche, 3=droite.
-        # Les numéros d'états augmentent quand on monte dans la grille.
         self.actions = [
-            (1, 0),
             (-1, 0),
+            (1, 0),
             (0, -1),
             (0, 1)
         ]
