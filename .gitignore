@@ -1,5 +1,9 @@
 # Python bytecode and caches
 __pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
 *.py[cod]
 *$py.class
 
@@ -35,6 +39,9 @@ dist/
 # IDE / editor files
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # OS-generated files
 .DS_Store
