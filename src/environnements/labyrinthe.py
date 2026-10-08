@@ -6,7 +6,15 @@ from src.environnements.environnement_discret import EnvironnementDiscret
 class Labyrinthe(EnvironnementDiscret):
     """Classe de base commune aux différents labyrinthes discrets.
 
-    Elle contient uniquement la mécanique commune :
+    Les états d'une grille sont numérotés de gauche à droite et de bas en haut.
+
+    Exemple pour une grille 4 x 4 :
+        12  13  14  15
+         8   9  10  11
+         4   5   6   7
+         0   1   2   3
+
+    Cette classe contient uniquement la mécanique commune :
         - déplacements sur une grille carrée ;
         - calcul des actions possibles ;
         - calcul de l'état suivant ;
@@ -28,10 +36,11 @@ class Labyrinthe(EnvironnementDiscret):
         self.arrivee = arrivee
         self.murs = list(murs)
 
-        # Actions : 0=haut, 1=bas, 2=gauche, 3=droite.
+        # 0=haut, 1=bas, 2=gauche, 3=droite.
+        # Les numéros d'états augmentent quand on monte dans la grille.
         self.actions = [
-            (-1, 0),
             (1, 0),
+            (-1, 0),
             (0, -1),
             (0, 1)
         ]
@@ -92,10 +101,7 @@ class Labyrinthe(EnvironnementDiscret):
             raise ValueError("Cette action est impossible dans l'état actuel.")
 
         self.etat = self.etat_suivant(self.etat, action)
-
-        # La méthode appelée ici est celle du labyrinthe concret.
         recompense = self.recompense(self.etat)
-
         termine = self.etat == self.arrivee
 
         return self.etat, recompense, termine
