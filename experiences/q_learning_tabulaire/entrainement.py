@@ -1,13 +1,13 @@
-"""Expérience : Q-learning sur le labyrinthe 4 x 4."""
+"""Expérience : Q-learning sur le labyrinthe 5 x 5."""
 
-from src.environnements.labyrinthe_4x4 import Labyrinthe4x4
+from src.environnements.labyrinthe_5x5 import Labyrinthe5x5
 from src.algorithmes.tabulaire.q_learning import QLearning
 
 
 def main():
     """Crée le labyrinthe puis entraîne le Q-learning."""
 
-    environnement = Labyrinthe4x4()
+    environnement = Labyrinthe5x5()
 
     algorithme = QLearning(
         environnement=environnement,
