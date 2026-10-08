@@ -1,16 +1,19 @@
+from abc import abstractmethod
+
 from src.environnements.environnement_discret import EnvironnementDiscret
 
 
 class Labyrinthe(EnvironnementDiscret):
     """Classe de base commune aux différents labyrinthes discrets.
 
-    Elle contient la mécanique commune :
+    Elle contient uniquement la mécanique commune :
         - déplacements sur une grille carrée ;
         - calcul des actions possibles ;
         - calcul de l'état suivant ;
         - reset et step.
 
-    La configuration concrète du labyrinthe est fournie par les classes filles.
+    La configuration et la fonction de récompense sont définies
+    par les labyrinthes concrets.
     """
 
     def __init__(self, taille, depart, arrivee, murs):
@@ -78,9 +81,10 @@ class Labyrinthe(EnvironnementDiscret):
 
         return (ligne + dl) * self.taille + (colonne + dc)
 
+    @abstractmethod
     def recompense(self, etat):
-        """Renvoie la récompense correspondant à l'état atteint."""
-        return 1.0 if etat == self.arrivee else -0.1
+        """Renvoie la récompense propre au labyrinthe concret."""
+        pass
 
     def step(self, action):
         """Exécute une action et renvoie (nouvel_etat, recompense, termine)."""
@@ -88,7 +92,10 @@ class Labyrinthe(EnvironnementDiscret):
             raise ValueError("Cette action est impossible dans l'état actuel.")
 
         self.etat = self.etat_suivant(self.etat, action)
+
+        # La méthode appelée ici est celle du labyrinthe concret.
         recompense = self.recompense(self.etat)
+
         termine = self.etat == self.arrivee
 
         return self.etat, recompense, termine
