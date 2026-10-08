@@ -66,7 +66,7 @@ Les cases sont numérotées ligne par ligne, de 0 à `nb_etats - 1` :
 
 Le calcul des déplacements est écrit une seule fois, dans la méthode `voisine(etat, action)`, qui renvoie la case voisine ou `None` si le déplacement sort de la grille ou vise un mur. `actions_possibles`, `etat_suivant` et la vérification du labyrinthe reposent toutes sur elle.
 
-À sa création, chaque grille est vérifiée : les obstacles sont dans la grille, ni le départ ni l'arrivée n'est un obstacle, et un parcours en largeur confirme qu'il existe au moins un chemin du départ à l'arrivée évitant les murs **et** les feux. Sinon, une `ValueError` est levée.
+À sa création, chaque grille est vérifiée : les obstacles sont dans la grille, ni le départ ni l'arrivée n'est un obstacle, et un parcours en largeur confirme qu'il existe au moins un chemin du départ à l'arrivée évitant les murs **et** les feux. Sinon, une `ValueError` est levée. Les feux étant traversables, cette dernière vérification n'est pas une question d'accessibilité : elle garantit que l'agent a toujours une solution sans pénalité, donc un choix à apprendre.
 
 ### Les trois configurations
 
@@ -113,8 +113,13 @@ L'agent part de la case 0, cherche la dernière case et peut tenter de se dépla
 | Événement | Récompense | Fin de l'épisode |
 |---|---:|---|
 | Arrivée | +1 | oui |
-| Feu | −1 | oui |
+| Feu | −10 | non, la case se traverse |
 | Autre déplacement | −0,1 | non |
+
+Un feu ne tue pas le robot : il peut le traverser et poursuivre sa route. Mais à
+−10, soit cent fois le coût d'un pas ordinaire, le détour est presque toujours
+préférable. C'est donc un vrai choix que l'agent doit apprendre, et non une
+case interdite.
 
 L'algorithme apprend une **table** donnant une valeur pour chaque couple (état, action), à l'aide de la mise à jour de Bellman :
 
@@ -147,10 +152,12 @@ python -m experiences.q_learning_tabulaire.entrainement
 ```text
 Chemin suivi : 0 -> 9 -> 18 -> 27 -> 28 -> 37 -> 38 -> 39 -> 40 -> 41 -> 42
                -> 51 -> 60 -> 61 -> 62 -> 71 -> 80
-Pas : 16    Score : -0.50    Issue : arrivée
+Pas : 16    Score : -0.50    Issue : arrivée    Feux traversés : 0
 ```
 
-L'issue vaut `arrivée`, `feu` ou `trop de pas`.
+L'issue vaut `arrivée` ou `trop de pas`, puisque seule l'arrivée termine
+l'épisode. Le compteur de feux traversés indique si l'agent a appris à les
+éviter.
 
 Afficher l'animation Tkinter de l'agent entraîné :
 
@@ -158,4 +165,16 @@ Afficher l'animation Tkinter de l'agent entraîné :
 python -m experiences.q_learning_tabulaire.simulation
 ```
 
-L'entraînement a lieu avant l'ouverture de la fenêtre. Celle-ci propose les boutons **Démarrer** et **Recommencer**, et indique la fin de l'épisode : `arrivée !`, `feu : épisode perdu` ou `trop de pas`. Sous Windows, la fenêtre s'ouvre parfois derrière l'éditeur. Pour quitter, la fermer avec la croix, pas avec Ctrl+C.
+L'entraînement a lieu avant l'ouverture de la fenêtre. Celle-ci propose les boutons **Démarrer** et **Recommencer**. Elle signale le passage sur un feu (`feu traversé : -10`) et la fin de l'épisode (`arrivée !` ou `trop de pas`). Sous Windows, la fenêtre s'ouvre parfois derrière l'éditeur. Pour quitter, la fermer avec la croix, pas avec Ctrl+C.
+
+## Progression envisagée
+
+| Phase | Sujet | Statut |
+|---|---|---|
+| 1 | Q-learning **tabulaire** sur labyrinthe simple | Disponible |
+| 2 | Environnements avec murs et feux | Disponible |
+| 3 | Mesures de performance : courbes d'apprentissage, comparaison des configurations | À développer |
+| 4 | **Deep Q-Network (DQN)** : un réseau de neurones approxime les valeurs `Q(s,a; θ)` à la place d'une table explicite | À développer |
+| 5 | Navigation dans des environnements plus complexes et robotique simulée | À développer |
+
+À mesure que le projet progressera, les nouveaux algorithmes seront ajoutés dans `src/algorithmes/` (par exemple `profond/dqn.py`) et leurs protocoles dans `experiences/`. Les nouveaux environnements hériteront de `EnvironnementDiscret`. **Aucun fichier DQN fictif n'est créé à ce stade.**
