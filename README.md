@@ -166,15 +166,3 @@ python -m experiences.q_learning_tabulaire.simulation
 ```
 
 L'entraînement a lieu avant l'ouverture de la fenêtre. Celle-ci propose les boutons **Démarrer** et **Recommencer**. Elle signale le passage sur un feu (`feu traversé : -10`) et la fin de l'épisode (`arrivée !` ou `trop de pas`). Sous Windows, la fenêtre s'ouvre parfois derrière l'éditeur. Pour quitter, la fermer avec la croix, pas avec Ctrl+C.
-
-## Progression envisagée
-
-| Phase | Sujet | Statut |
-|---|---|---|
-| 1 | Q-learning **tabulaire** sur labyrinthe simple | Disponible |
-| 2 | Environnements avec murs et feux | Disponible |
-| 3 | Mesures de performance : courbes d'apprentissage, comparaison des configurations | À développer |
-| 4 | **Deep Q-Network (DQN)** : un réseau de neurones approxime les valeurs `Q(s,a; θ)` à la place d'une table explicite | À développer |
-| 5 | Navigation dans des environnements plus complexes et robotique simulée | À développer |
-
-À mesure que le projet progressera, les nouveaux algorithmes seront ajoutés dans `src/algorithmes/` (par exemple `profond/dqn.py`) et leurs protocoles dans `experiences/`. Les nouveaux environnements hériteront de `EnvironnementDiscret`. **Aucun fichier DQN fictif n'est créé à ce stade.**
