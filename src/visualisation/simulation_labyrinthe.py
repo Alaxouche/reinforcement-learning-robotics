@@ -74,13 +74,16 @@ def lancer_simulation(lab, qlearning):
         nb_pas += 1
         score += lab.recompense(etat)
 
-        # On s'arrete a l'arrivee, dans un feu, ou si l'agent tourne en rond.
+        # On s'arrete a l'arrivee ou si l'agent tourne en rond. Un feu ne
+        # termine pas l'episode : il coute seulement tres cher.
         if etat == lab.arrivee:
             message = "arrivée !"
         elif etat in lab.feux:
-            message = "feu : épisode perdu"
+            message = "feu traversé : -10"
         elif nb_pas >= qlearning.max_pas:
             message = "trop de pas"
+        else:
+            message = ""
 
         en_marche = not episode_fini()
         dessiner()
