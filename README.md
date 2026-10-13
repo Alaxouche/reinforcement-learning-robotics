@@ -143,6 +143,28 @@ Depuis la racine du projet :
 py -m experiences.entrainement
 ```
 
+### Changer de labyrinthe pour l'entraînement
+
+`experiences/entrainement.py` n'accepte aucun argument : le labyrinthe utilisé (5x5 par défaut) est écrit dans le fichier. Pour en changer, modifier deux lignes, par exemple pour le 9x9 :
+
+```python
+from src.environnements.labyrinthe_9x9 import Labyrinthe9x9   # import en haut du fichier
+
+environnement = Labyrinthe9x9()                               # dans main()
+```
+
+Adapter aussi les hyperparamètres passés à `QLearning` (ce sont les valeurs utilisées par `experiences/graphes.py`) :
+
+| Labyrinthe | Classe | nb_episodes | max_pas | decroissance |
+|---|---|---|---|---|
+| 3x3 | `Labyrinthe3x3` | 300 | 20 | 0.98 |
+| 5x5 | `Labyrinthe5x5` | 1000 | 30 | 0.99 |
+| 9x9 | `Labyrinthe9x9` | 3000 | 200 | 0.998 |
+
+Avec `max_pas=30`, l'agent ne peut pas apprendre le 9x9 : le plus court chemin sans feu fait déjà 20 déplacements, et l'exploration en consomme beaucoup plus.
+
+`py -m experiences.graphes` traite les trois labyrinthes à la suite, sans modification.
+
 Génération des graphes (environ 2 minutes) :
 
 ```bash
