@@ -1,4 +1,4 @@
-from src.environnements.labyrinthe import Labyrinthe
+from src.environnements.labyrinthe.labyrinthe import Labyrinthe
 
 
 class Labyrinthe5x5(Labyrinthe):

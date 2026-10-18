@@ -1,6 +1,6 @@
 """Expérience : Q-learning sur le labyrinthe 5 x 5."""
 
-from src.environnements.labyrinthe_5x5 import Labyrinthe5x5
+from src.environnements.labyrinthe.labyrinthe_5x5 import Labyrinthe5x5
 from src.algorithmes.q_learning import QLearning
 
 

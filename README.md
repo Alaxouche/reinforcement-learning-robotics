@@ -12,8 +12,10 @@ reinforcement-learning-robotics/
 │   │
 │   └── environnements/
 │       ├── environnement_discret.py
-│       ├── labyrinthe.py
-│       └── labyrinthe_5x5.py
+│       └── labyrinthe/
+│           ├── __init__.py
+│           ├── labyrinthe.py
+│           └── labyrinthe_5x5.py
 │
 ├── experiences/
 │   └── entrainement.py
