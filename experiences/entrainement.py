@@ -1,11 +1,16 @@
 """Expérience : Q-learning sur le labyrinthe 5 x 5."""
 
+import numpy as np
+
 from src.environnements.labyrinthe.labyrinthe_5x5 import Labyrinthe5x5
 from src.algorithmes.q_learning import QLearning
 
 
 def main():
     """Crée le labyrinthe, entraîne le Q-learning et affiche les résultats."""
+
+    # Fixe l'aleatoire pour reproduire les memes entrainements.
+    np.random.seed(42)
 
     environnement = Labyrinthe5x5()
 
