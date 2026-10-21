@@ -12,13 +12,19 @@ reinforcement-learning-robotics/
 │   │
 │   └── environnements/
 │       ├── environnement_discret.py
-│       └── labyrinthe/
-│           ├── labyrinthe.py
-│           └── labyrinthe_5x5.py
+│       ├── labyrinthe/
+│       │   ├── labyrinthe.py
+│       │   └── labyrinthe_5x5.py
+│       └── bras_robotique/
+│           └── bras_robotique_2d.py
 │
 ├── experiences/
 │   ├── entrainement.py
+│   ├── entrainement_bras_robotique.py
 │   └── graphiques.py
+│
+├── tests/
+│   └── test_bras_robotique.py
 │
 ├── requirements.txt
 └── README.md
