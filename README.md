@@ -114,3 +114,56 @@ declares deja rencontres depuis le debut de l'entrainement.
 
 Les graphiques produits sont ignores par Git et peuvent etre recrees
 en relancant l'entrainement.
+
+## Deuxieme environnement : bras robotique 2D
+
+Le robot comporte deux segments de longueurs L1 et L2 fixes.
+Theta1 est mesure par rapport a l'horizontale, theta2 est l'angle
+du second segment par rapport au premier. Les coordonnees de
+l'effecteur sont :
+
+```text
+x = L1*cos(theta1) + L2*cos(theta1+theta2)
+y = L1*sin(theta1) + L2*sin(theta1+theta2)
+```
+
+Les angles sont discrets. Les quatre actions consistent a augmenter
+ou diminuer l'un des deux angles d'un pas (10 degres par defaut).
+On impose des butees articulaires et on interdit les poses dont le
+coude ou l'effecteur passe sous le sol y = 0.
+
+La cible M0=(x0,y0) est **fixe pendant chaque entrainement**.
+Le bras part de (theta1,theta2)=(90,0) degres et tente d'atteindre
+M0=(1,1) avec une tolerance de 0.15 unite de longueur.
+Le simulateur verifie qu'une position admissible peut atteindre
+la cible sur la grille d'angles choisie.
+
+La recompense pour une action est :
+`2*(distance_avant-distance_apres)-0.02`, plus `10` en cas
+de reussite. Il s'agit d'un modele cinematique simplifie :
+il n'inclut pas la dynamique des moteurs ni les collisions pendant
+la rotation continue entre deux poses.
+
+### Lancer le bras robotique
+
+```bash
+py -m experiences.entrainement_bras_robotique
+```
+
+Les six graphiques d'apprentissage generiques et un septieme graphique
+representant le bras et la trajectoire de son effecteur seront dans
+`experiences/resultats/bras_robotique/`, separes des resultats du labyrinthe.
+
+Les parametres (longueurs, angles, position cible, tolerance et nombre
+d'episodes) sont modifiables dans
+`experiences/entrainement_bras_robotique.py`.
+
+Pour executer les tests de la cinematique et des contraintes :
+
+```bash
+py -m unittest discover -s tests
+```
+
+A noter : si la cible change entre les episodes d'un meme entrainement,
+il faut integrer sa position dans l'etat RL ; cette premiere version
+apprend uniquement pour une cible fixe.
