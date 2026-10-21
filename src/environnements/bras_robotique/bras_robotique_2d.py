@@ -18,11 +18,15 @@ class BrasRobotique2D(EnvironnementDiscret):
     _deplacements = ((1, 0), (-1, 0), (0, 1), (0, -1))
 
     def __init__(self, longueurs=(1.0, 1.0), cible=(1.0, 1.0),
-                 pas_deg=10, angles_initiaux=(90, 0), tolerance=0.15):
+                 pas_deg=10, angles_initiaux=(90, 0), tolerance=0.15,
+                 mode_recompense="naive"):
         self.l1, self.l2 = (float(longueurs[0]), float(longueurs[1]))
         self.cible = (float(cible[0]), float(cible[1]))
         self.pas_deg = int(pas_deg)
         self.tolerance = float(tolerance)
+        if mode_recompense not in ("naive", "smart"):
+            raise ValueError("mode_recompense doit valoir 'naive' ou 'smart'.")
+        self.mode_recompense = mode_recompense
 
         if self.l1 <= 0 or self.l2 <= 0:
             raise ValueError("Les longueurs doivent etre strictement positives.")
@@ -105,6 +109,7 @@ class BrasRobotique2D(EnvironnementDiscret):
     def step(self, action):
         if action not in self.actions_possibles(self.etat):
             raise ValueError("Action impossible : cible deja atteinte ou action inconnue.")
+        distance_avant = self.distance_cible() if self.mode_recompense == "smart" else None
         i, j = divmod(self.etat, self.nb_theta2)
         di, dj = self._deplacements[action]
         self.etat = self._indices_vers_etat(
@@ -113,7 +118,13 @@ class BrasRobotique2D(EnvironnementDiscret):
         )
         termine = self.distance_cible(self.etat) <= self.tolerance
 
-        # Recompense simple : +10 si la cible est atteinte,
-        # sinon -0.02 par mouvement. Aucun bonus de rapprochement.
-        recompense = 10.0 if termine else -0.02
-        return self.etat, recompense, termine
+        # Deux methodes de recompense pour le meme bras et les memes actions.
+        if termine:
+            recompense = 10.0
+        elif self.mode_recompense == "naive":
+            recompense = -0.02
+        else:
+            # Positif quand on se rapproche, negatif quand on s'eloigne.
+            recompense = distance_avant - self.distance_cible() - 0.02
+
+        return self.etat, float(recompense), termine

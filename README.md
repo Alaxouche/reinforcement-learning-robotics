@@ -156,26 +156,58 @@ n'importe lequel des quatre quadrants, mais la portee physique
 reste limitee par les longueurs L1 et L2 : la distance a l'origine
 est comprise entre abs(L1-L2) et L1+L2 (avant discretisation).
 
-La recompense est volontairement simple et non dense :
-`+10` si le bras atteint la cible (fin de l'episode), sinon `-0.02`
-pour chaque mouvement. Il n'y a pas de recompense intermediaire
-pour le rapprochement vers la cible. Cette recompense parcimonieuse
-peut demander davantage d'exploration sur les cibles difficiles.
+Deux recompenses sont disponibles pour le meme simulateur :
+
+- **Naive (parcimonieuse)** : `+10` lorsque la cible est atteinte,
+  `-0.02` sinon. Elle indique uniquement la reussite et le cout
+  des actions.
+- **Smart (guidee par la distance)** : `+10` lorsque la cible est
+  atteinte ; sinon `distance_avant - distance_apres - 0.02`.
+  Elle favorise le rapprochement sans coefficient multiplicateur.
+  Exemple : de 1.0 a 0.8 unite, la recompense vaut `0.18`.
+  Le terme `-0.02` penalise les mouvements inutiles.
+
+Les deux variantes utilisent les memes etats, actions, angles, cibles
+et hyperparametres. Seule la fonction de recompense change.
+La recompense smart est plus informative pendant l'entrainement,
+mais n'assure pas necessairement le chemin le plus court.
+Les courbes de recompenses des deux modes ne sont pas directement
+comparables numeriquement car leurs definitions sont differentes.
 
 Il s'agit d'un modele cinematique simplifie :
 il n'inclut pas la dynamique des moteurs ni les collisions pendant
 la rotation continue entre deux poses. Aucune butee articulaire
 n'est imposee dans cette simulation.
 
-### Lancer le bras robotique
+### Lancer les robots (naif et smart)
+
+Les deux entrainements sont executes automatiquement, l'un apres l'autre :
 
 ```bash
 py -m experiences.entrainement_bras_robotique
 ```
 
-Les six graphiques d'apprentissage generiques et un septieme graphique
-representant le bras et la trajectoire de son effecteur seront dans
-`experiences/resultats/bras_robotique/`, separes des resultats du labyrinthe.
+On peut aussi choisir un seul mode :
+
+```bash
+py -m experiences.entrainement_bras_robotique --mode naive
+py -m experiences.entrainement_bras_robotique --mode smart
+```
+
+Pour chaque mode, six graphiques d'apprentissage et une image du
+bras/trajectoire sont enregistres independamment :
+
+```text
+experiences/resultats/bras_robotique/
+  naive/
+    01_recompenses.png ... 07_trajectoire_bras.png
+  smart/
+    01_recompenses.png ... 07_trajectoire_bras.png
+```
+
+Pour comparer les agents, prioriser le succes de l'evaluation sans
+exploration, le nombre de mouvements et la distance finale a la cible,
+plutot que la recompense brute : elle n'a pas la meme definition.
 
 Les parametres (longueurs, pas angulaire, position cible, tolerance et
 nombre d'episodes) sont modifiables dans

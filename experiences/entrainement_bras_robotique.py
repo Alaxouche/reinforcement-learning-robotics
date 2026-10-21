@@ -3,6 +3,7 @@
 Lancement depuis la racine : py -m experiences.entrainement_bras_robotique
 """
 
+import argparse
 from pathlib import Path
 
 import matplotlib
@@ -65,7 +66,9 @@ def dessiner_trajectoire(env, etats, destination):
     return destination
 
 
-def main():
+def entrainer_mode(mode):
+    """Entraine un agent avec un type de recompense choisi."""
+    # Meme seed et memes hyperparametres : seule la recompense change.
     np.random.seed(42)
 
     environnement = BrasRobotique2D(
@@ -73,7 +76,8 @@ def main():
         cible=(1.0, 1.0),
         pas_deg=10,
         angles_initiaux=(90, 0),
-        tolerance=0.15
+        tolerance=0.15,
+        mode_recompense=mode
     )
     algorithme = QLearning(
         environnement=environnement,
@@ -87,14 +91,15 @@ def main():
     )
     algorithme.apprendre(intervalle_evaluation=50)
 
-    dossier = Path(__file__).resolve().parent / "resultats" / "bras_robotique"
+    dossier = (Path(__file__).resolve().parent / "resultats"
+               / "bras_robotique" / mode)
     images = generer_graphiques(algorithme, dossier=dossier)
     etats, reussi = suivre_politique(algorithme)
     images.append(dessiner_trajectoire(
         environnement, etats, dossier / "07_trajectoire_bras.png"
     ))
 
-    print("\nBRAS ROBOTIQUE 2D")
+    print(f"\\nBRAS ROBOTIQUE - RECOMPENSE {mode.upper()}")
     print(f"Cible M0 : {environnement.cible}")
     print(f"Etats discrets : {environnement.nb_etats}")
     print(f"Cible atteinte : {'oui' if reussi else 'non'}")
@@ -102,11 +107,36 @@ def main():
     print(f"Angles finaux (degres) : {environnement.angles(etats[-1])}")
     print(f"Position finale : {environnement.positions(etats[-1])[2]}")
     print(f"Distance a la cible : {environnement.distance_cible(etats[-1]):.4f}")
-    print("\nGraphiques crees :")
+    print("Graphiques :")
     for image in images:
         print(f" - {image}")
-    return algorithme
+    return algorithme, reussi, len(etats) - 1
+
+
+def main(mode="tous"):
+    """Compare les recompenses ou lance un mode independamment."""
+    modes = ("naive", "smart") if mode == "tous" else (mode,)
+    resultats = {}
+    for nom in modes:
+        resultats[nom] = entrainer_mode(nom)
+
+    if len(resultats) == 2:
+        print("\\nCOMPARAISON : MEME BRAS, MEMES PARAMETRES")
+        for nom in modes:
+            _, reussi, actions = resultats[nom]
+            print(f"{nom:>5}: cible atteinte = {reussi}, actions = {actions}")
+        print("Attention : les recompenses des deux methodes"
+              " ne sont pas directement comparables.")
+    return resultats
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Comparer les recompenses naive et smart du bras robotique."
+    )
+    parser.add_argument(
+        "--mode", choices=("naive", "smart", "tous"),
+        default="tous", help="Type de recompense a tester (defaut : tous)."
+    )
+    arguments = parser.parse_args()
+    main(mode=arguments.mode)

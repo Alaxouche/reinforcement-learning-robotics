@@ -21,6 +21,33 @@ class TestBrasRobotique(unittest.TestCase):
         self.assertEqual(bras.angles(etat), (90, 270))
         self.assertEqual(bras.actions_possibles(etat), [])
 
+    def test_recompenses_naive_et_smart(self):
+        # Vers la meme cible, le mouvement theta2 - 10 rapproche le bras.
+        naive = BrasRobotique2D(mode_recompense="naive")
+        smart = BrasRobotique2D(mode_recompense="smart")
+        avant = smart.distance_cible()
+        _, recompense_naive, termine_naive = naive.step(3)
+        _, recompense_smart, termine_smart = smart.step(3)
+        self.assertFalse(termine_naive)
+        self.assertFalse(termine_smart)
+        self.assertAlmostEqual(recompense_naive, -0.02)
+        self.assertAlmostEqual(
+            recompense_smart, avant - smart.distance_cible() - 0.02
+        )
+        self.assertGreater(recompense_smart, recompense_naive)
+
+        # Au bout de neuf pas vers la cible, le bonus final est le meme.
+        for mode in ("naive", "smart"):
+            with self.subTest(mode=mode):
+                robot = BrasRobotique2D(mode_recompense=mode)
+                for _ in range(9):
+                    _, r, fini = robot.step(3)
+                self.assertTrue(fini)
+                self.assertAlmostEqual(r, 10.0)
+
+        with self.assertRaises(ValueError):
+            BrasRobotique2D(mode_recompense="inconnu")
+
     def test_rotation_circulaire_des_deux_angles(self):
         bras = BrasRobotique2D(angles_initiaux=(0, 0))
         bras.step(1)
