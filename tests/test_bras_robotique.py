@@ -32,21 +32,46 @@ class TestBrasRobotique(unittest.TestCase):
         self.assertFalse(termine_smart)
         self.assertAlmostEqual(recompense_naive, -0.02)
         self.assertAlmostEqual(
-            recompense_smart, avant - smart.distance_cible() - 0.02
+            recompense_smart, 2.0 * (avant - smart.distance_cible()) - 0.02
         )
         self.assertGreater(recompense_smart, recompense_naive)
 
-        # Au bout de neuf pas vers la cible, le bonus final est le meme.
+        # L'ancienne recompense smart ajoute le bonus de 10
+        # au terme de rapprochement meme sur le dernier mouvement.
         for mode in ("naive", "smart"):
             with self.subTest(mode=mode):
                 robot = BrasRobotique2D(mode_recompense=mode)
                 for _ in range(9):
+                    avant_final = robot.distance_cible()
                     _, r, fini = robot.step(3)
                 self.assertTrue(fini)
-                self.assertAlmostEqual(r, 10.0)
+                if mode == "naive":
+                    self.assertAlmostEqual(r, 10.0)
+                else:
+                    self.assertAlmostEqual(
+                        r, 2.0 * (avant_final - robot.distance_cible())
+                        - 0.02 + 10.0
+                    )
+
+        # Le coefficient influence seulement le mode smart.
+        for coefficient in (0.0, 0.5, 3.0):
+            robot = BrasRobotique2D(
+                mode_recompense="smart", coefficient_distance=coefficient
+            )
+            d0 = robot.distance_cible()
+            _, recompense, fini = robot.step(3)
+            self.assertFalse(fini)
+            self.assertAlmostEqual(
+                recompense,
+                coefficient * (d0 - robot.distance_cible()) - 0.02
+            )
 
         with self.assertRaises(ValueError):
             BrasRobotique2D(mode_recompense="inconnu")
+        with self.assertRaises(ValueError):
+            BrasRobotique2D(coefficient_distance=-1)
+        with self.assertRaises(ValueError):
+            BrasRobotique2D(coefficient_distance=float("nan"))
 
     def test_rotation_circulaire_des_deux_angles(self):
         bras = BrasRobotique2D(angles_initiaux=(0, 0))

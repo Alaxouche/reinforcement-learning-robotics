@@ -66,10 +66,11 @@ def dessiner_trajectoire(env, etats, destination):
     return destination
 
 
-def entrainer_mode(mode):
-    """Entraine un agent avec un type de recompense choisi."""
-    # Meme seed et memes hyperparametres : seule la recompense change.
-    np.random.seed(42)
+def entrainer_mode(mode, coefficient_distance=2.0, seed=42):
+    """Entraine un agent avec une recompense et une seed donnees."""
+    # La meme seed reinitialise les tirages a chaque entrainement.
+    # A configuration identique, les experiences sont reproductibles.
+    np.random.seed(seed)
 
     environnement = BrasRobotique2D(
         longueurs=(1.0, 1.0),
@@ -77,7 +78,8 @@ def entrainer_mode(mode):
         pas_deg=10,
         angles_initiaux=(90, 0),
         tolerance=0.15,
-        mode_recompense=mode
+        mode_recompense=mode,
+        coefficient_distance=coefficient_distance
     )
     algorithme = QLearning(
         environnement=environnement,
@@ -91,8 +93,13 @@ def entrainer_mode(mode):
     )
     algorithme.apprendre(intervalle_evaluation=50)
 
-    dossier = (Path(__file__).resolve().parent / "resultats"
-               / "bras_robotique" / mode)
+    # Un dossier par jeu de parametres evite d'ecraser les experiences.
+    racine = Path(__file__).resolve().parent / "resultats" / "bras_robotique"
+    if mode == "smart":
+        valeur = format(coefficient_distance, ".12g").replace("-", "moins_").replace(".", "_")
+        dossier = racine / mode / f"coefficient_{valeur}_seed_{seed}"
+    else:
+        dossier = racine / mode / f"seed_{seed}"
     images = generer_graphiques(algorithme, dossier=dossier)
     etats, reussi = suivre_politique(algorithme)
     images.append(dessiner_trajectoire(
@@ -100,6 +107,9 @@ def entrainer_mode(mode):
     ))
 
     print(f"\\nBRAS ROBOTIQUE - RECOMPENSE {mode.upper()}")
+    print(f"Seed : {seed}")
+    if mode == "smart":
+        print(f"Coefficient de distance : {coefficient_distance}")
     print(f"Cible M0 : {environnement.cible}")
     print(f"Etats discrets : {environnement.nb_etats}")
     print(f"Cible atteinte : {'oui' if reussi else 'non'}")
@@ -113,12 +123,14 @@ def entrainer_mode(mode):
     return algorithme, reussi, len(etats) - 1
 
 
-def main(mode="tous"):
+def main(mode="tous", coefficient_distance=2.0, seed=42):
     """Compare les recompenses ou lance un mode independamment."""
     modes = ("naive", "smart") if mode == "tous" else (mode,)
     resultats = {}
     for nom in modes:
-        resultats[nom] = entrainer_mode(nom)
+        resultats[nom] = entrainer_mode(
+            nom, coefficient_distance=coefficient_distance, seed=seed
+        )
 
     if len(resultats) == 2:
         print("\\nCOMPARAISON : MEME BRAS, MEMES PARAMETRES")
@@ -138,5 +150,14 @@ if __name__ == "__main__":
         "--mode", choices=("naive", "smart", "tous"),
         default="tous", help="Type de recompense a tester (defaut : tous)."
     )
+    parser.add_argument(
+        "--coefficient", type=float, default=2.0,
+        help="Poids de la variation de distance pour smart (defaut : 2)."
+    )
+    parser.add_argument(
+        "--seed", type=int, default=42,
+        help="Seed aleatoire pour reproduire l'experience (defaut : 42)."
+    )
     arguments = parser.parse_args()
-    main(mode=arguments.mode)
+    main(mode=arguments.mode, coefficient_distance=arguments.coefficient,
+         seed=arguments.seed)

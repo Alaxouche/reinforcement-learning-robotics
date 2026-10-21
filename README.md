@@ -161,10 +161,12 @@ Deux recompenses sont disponibles pour le meme simulateur :
 - **Naive (parcimonieuse)** : `+10` lorsque la cible est atteinte,
   `-0.02` sinon. Elle indique uniquement la reussite et le cout
   des actions.
-- **Smart (guidee par la distance)** : `+10` lorsque la cible est
-  atteinte ; sinon `distance_avant - distance_apres - 0.02`.
-  Elle favorise le rapprochement sans coefficient multiplicateur.
-  Exemple : de 1.0 a 0.8 unite, la recompense vaut `0.18`.
+- **Smart (guidee par la distance)** : on reprend la recompense
+  historique `c * (distance_avant - distance_apres) - 0.02`,
+  et on **ajoute 10** si la cible est atteinte.
+  Le coefficient `c` est configurable (valeur par defaut : `2.0`).
+  Exemple : distance de 1.0 a 0.8 avec `c=2`, la recompense
+  hors arrivee vaut `0.38`, et `10.38` a l'arrivee.
   Le terme `-0.02` penalise les mouvements inutiles.
 
 Les deux variantes utilisent les memes etats, actions, angles, cibles
@@ -187,21 +189,31 @@ Les deux entrainements sont executes automatiquement, l'un apres l'autre :
 py -m experiences.entrainement_bras_robotique
 ```
 
-On peut aussi choisir un seul mode :
+On peut aussi choisir un seul mode, le coefficient de rapprochement
+et la seed :
 
 ```bash
 py -m experiences.entrainement_bras_robotique --mode naive
-py -m experiences.entrainement_bras_robotique --mode smart
+py -m experiences.entrainement_bras_robotique --mode smart --coefficient 2 --seed 42
+py -m experiences.entrainement_bras_robotique --mode smart --coefficient 0.5 --seed 42
 ```
 
-Pour chaque mode, six graphiques d'apprentissage et une image du
-bras/trajectoire sont enregistres independamment :
+Par defaut, `--coefficient 2` et `--seed 42`.
+La seed est appliquee de nouveau au debut de chaque entrainement :
+a conditions et versions logicielles identiques, on peut reproduire
+les experiences. Pour comparer differents coefficients, conserver
+la meme seed ; puis essayer plusieurs seeds pour verifier la robustesse.
+
+Chaque execution enregistre six graphiques et la trajectoire
+dans un sous-dossier identifie par les parametres :
 
 ```text
 experiences/resultats/bras_robotique/
-  naive/
+  naive/seed_42/
     01_recompenses.png ... 07_trajectoire_bras.png
-  smart/
+  smart/coefficient_2_seed_42/
+    01_recompenses.png ... 07_trajectoire_bras.png
+  smart/coefficient_0_5_seed_42/
     01_recompenses.png ... 07_trajectoire_bras.png
 ```
 

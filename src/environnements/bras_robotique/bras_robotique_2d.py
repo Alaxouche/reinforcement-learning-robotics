@@ -19,7 +19,7 @@ class BrasRobotique2D(EnvironnementDiscret):
 
     def __init__(self, longueurs=(1.0, 1.0), cible=(1.0, 1.0),
                  pas_deg=10, angles_initiaux=(90, 0), tolerance=0.15,
-                 mode_recompense="naive"):
+                 mode_recompense="naive", coefficient_distance=2.0):
         self.l1, self.l2 = (float(longueurs[0]), float(longueurs[1]))
         self.cible = (float(cible[0]), float(cible[1]))
         self.pas_deg = int(pas_deg)
@@ -27,6 +27,10 @@ class BrasRobotique2D(EnvironnementDiscret):
         if mode_recompense not in ("naive", "smart"):
             raise ValueError("mode_recompense doit valoir 'naive' ou 'smart'.")
         self.mode_recompense = mode_recompense
+        self.coefficient_distance = float(coefficient_distance)
+        if (not math.isfinite(self.coefficient_distance)
+                or self.coefficient_distance < 0):
+            raise ValueError("coefficient_distance doit etre fini et positif ou nul.")
 
         if self.l1 <= 0 or self.l2 <= 0:
             raise ValueError("Les longueurs doivent etre strictement positives.")
@@ -118,13 +122,15 @@ class BrasRobotique2D(EnvironnementDiscret):
         )
         termine = self.distance_cible(self.etat) <= self.tolerance
 
-        # Deux methodes de recompense pour le meme bras et les memes actions.
-        if termine:
-            recompense = 10.0
-        elif self.mode_recompense == "naive":
-            recompense = -0.02
+        # Mode naif : seule l'arrivee rapporte une recompense.
+        if self.mode_recompense == "naive":
+            recompense = 10.0 if termine else -0.02
         else:
-            # Positif quand on se rapproche, negatif quand on s'eloigne.
-            recompense = distance_avant - self.distance_cible() - 0.02
+            # Mode smart : recompense historique avec un coefficient
+            # reglable a la place de 2. Le bonus final s'ajoute.
+            variation_distance = distance_avant - self.distance_cible()
+            recompense = self.coefficient_distance * variation_distance - 0.02
+            if termine:
+                recompense += 10.0
 
         return self.etat, float(recompense), termine
