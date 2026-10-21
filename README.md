@@ -156,9 +156,13 @@ n'importe lequel des quatre quadrants, mais la portee physique
 reste limitee par les longueurs L1 et L2 : la distance a l'origine
 est comprise entre abs(L1-L2) et L1+L2 (avant discretisation).
 
-La recompense pour une action est :
-`2*(distance_avant-distance_apres)-0.02`, plus `10` en cas
-de reussite. Il s'agit d'un modele cinematique simplifie :
+La recompense est volontairement simple et non dense :
+`+10` si le bras atteint la cible (fin de l'episode), sinon `-0.02`
+pour chaque mouvement. Il n'y a pas de recompense intermediaire
+pour le rapprochement vers la cible. Cette recompense parcimonieuse
+peut demander davantage d'exploration sur les cibles difficiles.
+
+Il s'agit d'un modele cinematique simplifie :
 il n'inclut pas la dynamique des moteurs ni les collisions pendant
 la rotation continue entre deux poses. Aucune butee articulaire
 n'est imposee dans cette simulation.

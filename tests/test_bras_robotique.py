@@ -12,8 +12,11 @@ class TestBrasRobotique(unittest.TestCase):
         self.assertEqual(bras.angles(bras.reset()), (90, 0))
         self.assertLess(math.dist(bras.positions()[-1], (0, 2)), 1e-10)
         for _ in range(9):
-            etat, _, termine = bras.step(3)
+            etat, recompense, termine = bras.step(3)
+            if not termine:
+                self.assertAlmostEqual(recompense, -0.02)
         self.assertTrue(termine)
+        self.assertAlmostEqual(recompense, 10.0)
         self.assertLess(bras.distance_cible(), 1e-9)
         self.assertEqual(bras.angles(etat), (90, 270))
         self.assertEqual(bras.actions_possibles(etat), [])

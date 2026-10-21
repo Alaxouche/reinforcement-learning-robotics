@@ -105,19 +105,15 @@ class BrasRobotique2D(EnvironnementDiscret):
     def step(self, action):
         if action not in self.actions_possibles(self.etat):
             raise ValueError("Action impossible : cible deja atteinte ou action inconnue.")
-        ancienne_distance = self.distance_cible(self.etat)
         i, j = divmod(self.etat, self.nb_theta2)
         di, dj = self._deplacements[action]
         self.etat = self._indices_vers_etat(
             (i + di) % len(self.angles_theta1),
             (j + dj) % self.nb_theta2
         )
-        nouvelle_distance = self.distance_cible(self.etat)
-        termine = nouvelle_distance <= self.tolerance
+        termine = self.distance_cible(self.etat) <= self.tolerance
 
-        # Recompense dense : progres vers la cible, cout d'une action,
-        # puis grand bonus lorsque l'effecteur atteint la cible.
-        recompense = 2.0 * (ancienne_distance - nouvelle_distance) - 0.02
-        if termine:
-            recompense += 10.0
-        return self.etat, float(recompense), termine
+        # Recompense simple : +10 si la cible est atteinte,
+        # sinon -0.02 par mouvement. Aucun bonus de rapprochement.
+        recompense = 10.0 if termine else -0.02
+        return self.etat, recompense, termine
