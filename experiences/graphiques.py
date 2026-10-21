@@ -31,13 +31,15 @@ def _enregistrer(fig, dossier, nom):
 
 
 def _courbe(valeurs, titre, ordonnee, dossier, nom,
-            moyenne=True, limites=None):
+            moyenne=True, limites=None, afficher_brut=True):
     fig, ax = plt.subplots(figsize=(9, 4.5))
-    ax.plot(np.arange(1, len(valeurs) + 1), valeurs,
-            alpha=0.45 if moyenne else 1, label="Par episode")
+    if afficher_brut:
+        ax.plot(np.arange(1, len(valeurs) + 1), valeurs,
+                alpha=0.45 if moyenne else 1, label="Par episode")
     if moyenne and len(valeurs) > 1:
         x, y = _moyenne_glissante(valeurs)
-        ax.plot(x, y, linewidth=2, label="Moyenne glissante (50 episodes)")
+        ax.plot(x, y, linewidth=2, color="tab:orange",
+                label="Moyenne glissante (50 episodes)")
         ax.legend()
     ax.set(title=titre, xlabel="Episode", ylabel=ordonnee)
     if limites is not None:
@@ -66,7 +68,7 @@ def generer_graphiques(algorithme, dossier=None):
     chemins = [
         _courbe(algorithme.recompenses,
                 "Recompense cumulee par episode", "Recompense totale",
-                dossier, "01_recompenses.png"),
+                dossier, "01_recompenses.png", afficher_brut=False),
         _courbe(algorithme.nombre_actions,
                 "Nombre d'actions par episode", "Nombre d'actions",
                 dossier, "02_nombre_actions.png"),
