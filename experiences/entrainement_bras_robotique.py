@@ -47,10 +47,12 @@ def dessiner_trajectoire(env, etats, destination):
             "-.", color="tab:green", lw=2, label="Trajectoire de l'effecteur")
     ax.scatter(*env.cible, marker="*", s=200,
                color="tab:red", label="Cible M0", zorder=5)
-    ax.axhline(0, color="black", lw=1.3)
+    # Axes du plan, sans sol ni limite de quadrant.
+    ax.axhline(0, color="black", lw=1)
+    ax.axvline(0, color="black", lw=1)
     portee = env.l1 + env.l2
     ax.set_xlim(-portee - .2, portee + .2)
-    ax.set_ylim(-.1, portee + .2)
+    ax.set_ylim(-portee - .2, portee + .2)
     ax.set_aspect("equal", adjustable="box")
     ax.set(xlabel="x", ylabel="y", title="Bras robotique - trajectoire apprise")
     ax.grid(alpha=.25)
@@ -70,8 +72,6 @@ def main():
         longueurs=(1.0, 1.0),
         cible=(1.0, 1.0),
         pas_deg=10,
-        limites_theta1=(0, 180),
-        limites_theta2=(-150, 150),
         angles_initiaux=(90, 0),
         tolerance=0.15
     )
