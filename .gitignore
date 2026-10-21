@@ -48,4 +48,8 @@ dist/
 Thumbs.db
 
 # Graphiques generes lors des entrainements
-experiences/resultats/
+# Garder les dossiers visibles dans Git sans suivre leurs sorties.
+experiences/resultats/*
+!experiences/resultats/*/
+experiences/resultats/*/*
+!experiences/resultats/*/.gitkeep

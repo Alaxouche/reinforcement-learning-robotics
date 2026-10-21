@@ -21,7 +21,10 @@ reinforcement-learning-robotics/
 ├── experiences/
 │   ├── entrainement.py
 │   ├── entrainement_bras_robotique.py
-│   └── graphiques.py
+│   ├── graphiques.py
+│   └── resultats/
+│       ├── labyrinthes/
+│       └── bras_robotique/
 │
 ├── tests/
 │   └── test_bras_robotique.py
@@ -103,7 +106,7 @@ py -m experiences.entrainement
 ## Graphiques d'apprentissage
 
 `py -m experiences.entrainement` enregistre automatiquement 6 PNG dans
-`experiences/resultats/` :
+`experiences/resultats/labyrinthes/` :
 
 1. recompense cumulee par episode et moyenne glissante ;
 2. nombre d'actions par episode ;
@@ -119,7 +122,11 @@ de la table Q). Le terme "couverture" designe le pourcentage d'etats
 declares deja rencontres depuis le debut de l'entrainement.
 
 Les graphiques produits sont ignores par Git et peuvent etre recrees
-en relancant l'entrainement.
+en relancant l'entrainement. Les labyrinthes enregistrent les images dans
+`experiences/resultats/labyrinthes/` et le bras robotique dans
+`experiences/resultats/bras_robotique/`. Au prochain entrainement
+du labyrinthe, les anciens PNG generes directement dans
+`experiences/resultats/` sont deplaces dans le dossier `labyrinthes/`.
 
 ## Deuxieme environnement : bras robotique 2D
 

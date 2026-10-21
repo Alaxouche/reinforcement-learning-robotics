@@ -1,5 +1,7 @@
 """Expérience : Q-learning sur le labyrinthe 5 x 5."""
 
+from pathlib import Path
+
 import numpy as np
 
 from src.environnements.labyrinthe.labyrinthe_5x5 import Labyrinthe5x5
@@ -28,8 +30,31 @@ def main():
 
     algorithme.apprendre()
 
+    # Dossier dedie aux labyrinthes, separe du bras robotique.
+    racine_resultats = Path(__file__).resolve().parent / "resultats"
+    dossier = racine_resultats / "labyrinthes"
+    dossier.mkdir(parents=True, exist_ok=True)
+
+    # Deplace les anciens graphiques crees dans la racine de "resultats".
+    # Les sorties precedentes peuvent avoir conserve les anciens numeros.
+    noms_graphiques = (
+        "01_recompenses.png",
+        "02_nombre_actions.png",
+        "03_variation_q.png",
+        "04_couverture_etats.png",
+        "05_epsilon_exploration.png",
+        "05_erreur_td.png",
+        "06_erreur_td.png",
+        "06_evaluation_sans_exploration.png",
+        "07_evaluation_sans_exploration.png",
+    )
+    for nom in noms_graphiques:
+        ancien = racine_resultats / nom
+        if ancien.is_file():
+            ancien.replace(dossier / nom)
+
     # Sauvegarde automatique des six graphiques generiques.
-    fichiers = generer_graphiques(algorithme)
+    fichiers = generer_graphiques(algorithme, dossier=dossier)
     print("\nGRAPHIQUES GENERES")
     for fichier in fichiers:
         print(f" - {fichier}")
