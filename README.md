@@ -13,12 +13,12 @@ reinforcement-learning-robotics/
 │   └── environnements/
 │       ├── environnement_discret.py
 │       └── labyrinthe/
-│           ├── __init__.py
 │           ├── labyrinthe.py
 │           └── labyrinthe_5x5.py
 │
 ├── experiences/
-│   └── entrainement.py
+│   ├── entrainement.py
+│   └── graphiques.py
 │
 ├── requirements.txt
 └── README.md
@@ -93,3 +93,25 @@ Depuis la racine du projet :
 ```bash
 py -m experiences.entrainement
 ```
+
+## Graphiques d'apprentissage
+
+`py -m experiences.entrainement` enregistre automatiquement 7 PNG dans
+`experiences/resultats/` :
+
+1. recompense cumulee par episode et moyenne glissante ;
+2. nombre d'actions par episode ;
+3. variation maximale de la Q-table ;
+4. couverture cumulee des etats ;
+5. epsilon et proportion observee d'exploration ;
+6. moyenne de la valeur absolue de l'erreur TD ;
+7. recompense moyenne lors de l'evaluation sans exploration.
+
+Les mesures proviennent des attributs de `QLearning`, sans dependance
+aux labyrinthes. Le dernier graphique repose sur des evaluations
+periodiques de la politique gloutonne (5 episodes, aucune mise a jour
+de la table Q). Le terme "couverture" designe le pourcentage d'etats
+declares deja rencontres depuis le debut de l'entrainement.
+
+Les graphiques produits sont ignores par Git et peuvent etre recrees
+en relancant l'entrainement.

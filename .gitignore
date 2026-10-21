@@ -46,3 +46,6 @@ dist/
 # OS-generated files
 .DS_Store
 Thumbs.db
+
+# Graphiques generes lors des entrainements
+experiences/resultats/

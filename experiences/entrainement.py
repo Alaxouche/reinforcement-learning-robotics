@@ -4,6 +4,7 @@ import numpy as np
 
 from src.environnements.labyrinthe.labyrinthe_5x5 import Labyrinthe5x5
 from src.algorithmes.q_learning import QLearning
+from experiences.graphiques import generer_graphiques
 
 
 def main():
@@ -26,6 +27,12 @@ def main():
     )
 
     algorithme.apprendre()
+
+    # Sauvegarde automatique des sept graphiques generiques.
+    fichiers = generer_graphiques(algorithme)
+    print("\nGRAPHIQUES GENERES")
+    for fichier in fichiers:
+        print(f" - {fichier}")
 
     # Affichage propre de la table Q.
     print("\nTABLE Q")
@@ -83,7 +90,7 @@ def main():
         visites.add(nouvel_etat)
         etat = nouvel_etat
 
-    print("\nCHEMIN OPTIMAL DÉTECTÉ PAR L'AGENT")
+    print("\nCHEMIN APPRIS PAR L'AGENT")
     print("=" * 62)
     print(" -> ".join(str(etat) for etat in chemin))
     print(f"Nombre de déplacements : {len(chemin) - 1}")
