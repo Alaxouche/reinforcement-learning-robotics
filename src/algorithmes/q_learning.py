@@ -34,12 +34,9 @@ class QLearning:
         self.nombre_actions = []
         self.variations_q = []
         self.couverture_etats = []
-        self.epsilons = []
-        self.taux_exploration = []
         self.erreurs_td = []
         self.episodes_evaluation = []
         self.recompenses_evaluation = []
-        self._derniere_exploration = False
 
         # Une ligne par état, une colonne par action.
         self.Q = np.zeros(
@@ -64,11 +61,8 @@ class QLearning:
         if not actions:
             raise ValueError("Aucune action possible dans cet état.")
 
-        # On conserve le choix fait, pour mesurer l'exploration.
-        self._derniere_exploration = bool(
-            np.random.random() < self.epsilon
-        )
-        if self._derniere_exploration:
+        # Exploration aleatoire ou exploitation de la Q-table.
+        if np.random.random() < self.epsilon:
             return int(np.random.choice(actions))
         return self.meilleure_action(etat)
 
@@ -99,8 +93,6 @@ class QLearning:
         self.nombre_actions = []
         self.variations_q = []
         self.couverture_etats = []
-        self.epsilons = []
-        self.taux_exploration = []
         self.erreurs_td = []
         self.episodes_evaluation = []
         self.recompenses_evaluation = []
@@ -119,9 +111,7 @@ class QLearning:
 
             total = 0.0
             compteur = 0
-            explorations = 0
             erreurs = []
-            self.epsilons.append(float(self.epsilon))
 
             for _ in range(self.max_pas):
                 actions = self.env.actions_possibles(etat)
@@ -129,7 +119,6 @@ class QLearning:
                     break
 
                 action = self.choisir_action(etat)
-                explorations += int(self._derniere_exploration)
 
                 nouvel_etat, recompense, termine = self.env.step(action)
                 etats_visites.add(int(nouvel_etat))
@@ -165,9 +154,6 @@ class QLearning:
             )
             self.couverture_etats.append(
                 100.0 * len(etats_visites) / self.env.nb_etats
-            )
-            self.taux_exploration.append(
-                explorations / compteur if compteur else float("nan")
             )
             self.erreurs_td.append(
                 float(np.mean(erreurs)) if erreurs else float("nan")

@@ -28,7 +28,7 @@ def main():
 
     algorithme.apprendre()
 
-    # Sauvegarde automatique des sept graphiques generiques.
+    # Sauvegarde automatique des six graphiques generiques.
     fichiers = generer_graphiques(algorithme)
     print("\nGRAPHIQUES GENERES")
     for fichier in fichiers:
