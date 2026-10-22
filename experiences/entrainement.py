@@ -1,117 +1,82 @@
 """Expérience : Q-learning sur le labyrinthe 5 x 5."""
 
 from pathlib import Path
-
 import numpy as np
 
 from src.environnements.labyrinthe.labyrinthe_5x5 import Labyrinthe5x5
 from src.algorithmes.q_learning import QLearning
 from experiences.graphiques import generer_graphiques
+from experiences.graphes_analyse import generer_graphes_analyse
 
 
 def main():
-    """Crée le labyrinthe, entraîne le Q-learning et affiche les résultats."""
-
-    # Fixe l'aleatoire pour reproduire les memes entrainements.
     np.random.seed(42)
-
     environnement = Labyrinthe5x5()
-
     algorithme = QLearning(
         environnement=environnement,
-        alpha=0.1,
-        gamma=0.9,
-        epsilon=1.0,
-        epsilon_min=0.05,
-        decroissance=0.99,
-        nb_episodes=1000,
-        max_pas=30
+        alpha=0.1, gamma=0.9, epsilon=1.0, epsilon_min=0.05,
+        decroissance=0.99, nb_episodes=1000, max_pas=30
     )
-
     algorithme.apprendre()
 
-    # Dossier dedie aux labyrinthes, separe du bras robotique.
     racine_resultats = Path(__file__).resolve().parent / "resultats"
     dossier = racine_resultats / "labyrinthes"
     dossier.mkdir(parents=True, exist_ok=True)
 
-    # Deplace les anciens graphiques crees dans la racine de "resultats".
-    # Les sorties precedentes peuvent avoir conserve les anciens numeros.
+    # Déplace les anciens graphiques placés dans resultats/.
     noms_graphiques = (
-        "01_recompenses.png",
-        "02_nombre_actions.png",
-        "03_variation_q.png",
-        "04_couverture_etats.png",
-        "05_epsilon_exploration.png",
-        "05_erreur_td.png",
-        "06_erreur_td.png",
-        "06_evaluation_sans_exploration.png",
-        "07_evaluation_sans_exploration.png",
+        "01_recompenses.png", "02_nombre_actions.png", "03_variation_q.png",
+        "04_couverture_etats.png", "05_epsilon_exploration.png",
+        "05_erreur_td.png", "06_erreur_td.png",
+        "06_evaluation_sans_exploration.png", "07_evaluation_sans_exploration.png",
     )
     for nom in noms_graphiques:
         ancien = racine_resultats / nom
         if ancien.is_file():
             ancien.replace(dossier / nom)
 
-    # Sauvegarde automatique des six graphiques generiques.
     fichiers = generer_graphiques(algorithme, dossier=dossier)
-    print("\nGRAPHIQUES GENERES")
+    fichiers += generer_graphes_analyse(algorithme, environnement, dossier,
+                                        "Labyrinthe 5×5")
+    print("\nGRAPHIQUES GÉNÉRÉS")
     for fichier in fichiers:
         print(f" - {fichier}")
 
-    # Affichage propre de la table Q.
     print("\nTABLE Q")
     print("=" * 62)
-
     entete = f"{'Etat':>6}"
     for nom_action in environnement.noms_actions:
         entete += f"{nom_action:>14}"
-
     print(entete)
     print("-" * 62)
-
     for etat in range(environnement.nb_etats):
         ligne = f"{etat:>6}"
-
         for action in range(environnement.nb_actions):
             ligne += f"{algorithme.Q[etat, action]:>14.3f}"
-
         print(ligne)
-
     print("=" * 62)
 
-    # Détection du chemin appris par l'agent.
     etat = environnement.reset()
     chemin = [etat]
     visites = {etat}
     objectif_atteint = False
     boucle_detectee = False
-
     for _ in range(algorithme.max_pas):
         if etat == environnement.arrivee:
             objectif_atteint = True
             break
-
         actions = environnement.actions_possibles(etat)
-
         if not actions:
             break
-
-        # Après l'entraînement, on n'explore plus :
-        # on choisit toujours l'action ayant la plus grande Q-value.
         action = algorithme.meilleure_action(etat)
-
         nouvel_etat, _, termine = environnement.step(action)
         chemin.append(nouvel_etat)
-
         if termine:
             objectif_atteint = True
             break
-
         if nouvel_etat in visites:
             boucle_detectee = True
             break
-
         visites.add(nouvel_etat)
         etat = nouvel_etat
 
@@ -119,16 +84,13 @@ def main():
     print("=" * 62)
     print(" -> ".join(str(etat) for etat in chemin))
     print(f"Nombre de déplacements : {len(chemin) - 1}")
-
     if objectif_atteint:
         print("Objectif atteint : Oui")
     elif boucle_detectee:
         print("Objectif atteint : Non (boucle détectée)")
     else:
         print("Objectif atteint : Non")
-
     print("=" * 62)
-
     return algorithme
 
 
