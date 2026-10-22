@@ -22,12 +22,12 @@ reinforcement-learning-robotics/
 │   ├── entrainement.py
 │   ├── entrainement_bras_robotique.py
 │   ├── graphiques.py
+│   ├── graphes_analyse.py
+│   ├── comparer_exploration.py
+│   ├── README_graphes.md
 │   └── resultats/
 │       ├── labyrinthes/
 │       └── bras_robotique/
-│
-├── tests/
-│   └── test_bras_robotique.py
 │
 ├── requirements.txt
 └── README.md
@@ -128,6 +128,20 @@ en relancant l'entrainement. Les labyrinthes enregistrent les images dans
 du labyrinthe, les anciens PNG generes directement dans
 `experiences/resultats/` sont deplaces dans le dossier `labyrinthes/`.
 
+## Graphiques d'analyse par action
+
+Les commandes habituelles de l'entraînement génèrent désormais **6 graphiques génériques et 7 analyses supplémentaires** par environnement : triptyque récompenses/actions/epsilon, Q-values en 3D, meilleure action par état et **4 cartes bleues distinctes des Q-values par action** (aucune carte globale \u00ab max Q \u00bb). Pour le bras, les quatre cartes utilisent le plan des deux angles et affichent les rotations theta1+/theta1-/theta2+/theta2-.
+
+Le comparatif entre epsilon et plusieurs seeds est volontairement séparé (car il réentraîne plusieurs agents) :
+
+```bash
+py -m experiences.comparer_exploration --environnement labyrinthe
+py -m experiences.comparer_exploration --environnement bras --mode naive
+py -m experiences.comparer_exploration --environnement bras --mode smart
+```
+
+Explications, fichiers produits et options : [experiences/README_graphes.md](experiences/README_graphes.md).
+
 ## Deuxieme environnement : bras robotique 2D
 
 Le robot comporte deux segments de longueurs L1 et L2 fixes.
@@ -224,12 +238,6 @@ plutot que la recompense brute : elle n'a pas la meme definition.
 Les parametres (longueurs, pas angulaire, position cible, tolerance et
 nombre d'episodes) sont modifiables dans
 `experiences/entrainement_bras_robotique.py`.
-
-Pour executer les tests de la cinematique et des contraintes :
-
-```bash
-py -m unittest discover -s tests
-```
 
 A noter : si la cible change entre les episodes d'un meme entrainement,
 il faut integrer sa position dans l'etat RL ; cette premiere version
