@@ -1,7 +1,10 @@
 """Vérifications des indicateurs de QLearning et du chemin glouton des graphes."""
 import unittest
+from unittest import mock
 
 import numpy as np
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from experiences import graphes as experience
 from experiences.entrainement_bras_robotique import MODES_BRAS
@@ -63,9 +66,9 @@ class TestChemin(unittest.TestCase):
 
         self.assertTrue(np.array_equal(temoin.Q, controle.Q))
 
-    def test_blocs_identiques_a_l_entrainement_complet(self):
+    def test_entrainement_graphes_identique_a_l_entrainement_complet(self):
         config = dict(experience.EXPERIENCES[1], nb_episodes=100, max_pas=12)
-        par_blocs, _, _ = experience.entrainer(config, 1.0, config["epsilon_min"], 42)
+        par_script, _ = experience.entrainer(config, 42)
 
         np.random.seed(42)
         env = MODES_BRAS["naive"](depart_aleatoire=True, seed=42)
@@ -74,7 +77,37 @@ class TestChemin(unittest.TestCase):
                             decroissance=config["decroissance"], nb_episodes=100, max_pas=12)
         complet.apprendre()
 
-        self.assertTrue(np.array_equal(par_blocs.Q, complet.Q))
+        self.assertTrue(np.array_equal(par_script.Q, complet.Q))
+
+
+    def test_meilleure_action_textes_bras_et_fleches_labyrinthe(self):
+        """Les bras affichent theta1/theta2, le labyrinthe des flèches."""
+        agent = agent_bras(nb_episodes=5)
+        agent.apprendre()
+        with (mock.patch.object(Axes, "text", autospec=True) as texte,
+              mock.patch.object(Axes, "arrow", autospec=True) as fleche,
+              mock.patch.object(Figure, "savefig")):
+            graphes.graphe_meilleure_action(agent, agent.env, "Bras", "inutilise.png")
+            etiquettes = [appel.args[3] for appel in texte.call_args_list
+                          if len(appel.args) >= 4 and isinstance(appel.args[3], str)]
+            self.assertTrue(any(e in ("theta1+", "theta1-", "theta2+", "theta2-")
+                                for e in etiquettes))
+            self.assertEqual(fleche.call_count, 0)
+
+        np.random.seed(0)
+        env = Labyrinthe5x5()
+        agent_labyrinthe = QLearning(environnement=env, alpha=0.1, gamma=0.9,
+                                    epsilon=1.0, epsilon_min=0.05, decroissance=0.99,
+                                    nb_episodes=10, max_pas=15)
+        agent_labyrinthe.apprendre()
+        with (mock.patch.object(Axes, "text", autospec=True) as texte,
+              mock.patch.object(Axes, "arrow", autospec=True) as fleche,
+              mock.patch.object(Figure, "savefig")):
+            graphes.graphe_meilleure_action(agent_labyrinthe, env,
+                                            "Labyrinthe", "inutilise.png")
+            self.assertGreater(fleche.call_count, 0)
+            self.assertFalse(any("theta" in str(appel)
+                                 for appel in texte.call_args_list))
 
 
 if __name__ == "__main__":
