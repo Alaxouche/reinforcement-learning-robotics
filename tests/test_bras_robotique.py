@@ -21,11 +21,30 @@ class TestBrasRobotique(unittest.TestCase):
                 if mode == "naive":
                     attendu = 10.0 if termine else -0.02
                 elif mode == "smart":
-                    attendu = 2.0 * (distance_avant - distance_apres) - 0.02
-                    if termine:
-                        attendu += 10.0
+                    attendu = -distance_apres
                 else:
-                    attendu = -distance_apres + (10.0 if termine else 0.0)
+                    attendu = distance_avant - distance_apres
+                self.assertAlmostEqual(recompense, attendu)
+
+    def test_recompense_terminale_sans_bonus_smart_ou_distance(self):
+        for mode in ("smart", "distance"):
+            with self.subTest(mode=mode):
+                env = BrasRobotique2D(mode_recompense=mode)
+                # Cherche une transition menant à la cible depuis un état non terminal.
+                transition = None
+                for etat in env.etats_depart:
+                    for action in env.actions_possibles(etat):
+                        env.reset(etat_depart=etat)
+                        d_avant = env.distance_cible()
+                        nouvel_etat, recompense, termine = env.step(action)
+                        if termine:
+                            transition = (d_avant, env.distance_cible(nouvel_etat), recompense)
+                            break
+                    if transition is not None:
+                        break
+                self.assertIsNotNone(transition)
+                d_avant, d_apres, recompense = transition
+                attendu = -d_apres if mode == "smart" else d_avant - d_apres
                 self.assertAlmostEqual(recompense, attendu)
 
     def test_depart_aleatoire_reproductible_et_non_terminal(self):
