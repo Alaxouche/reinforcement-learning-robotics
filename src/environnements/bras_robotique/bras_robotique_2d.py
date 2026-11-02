@@ -5,6 +5,7 @@ theta2 relatif au premier segment. Mouvement libre dans tout le plan 2D.
 """
 
 import math
+import random
 
 from src.environnements.environnement_discret import EnvironnementDiscret
 
@@ -19,15 +20,18 @@ class BrasRobotique2D(EnvironnementDiscret):
 
     def __init__(self, longueurs=(1.0, 1.0), cible=(1.0, 1.0),
                  pas_deg=10, angles_initiaux=(90, 0), tolerance=0.15,
-                 mode_recompense="naive", coefficient_distance=2.0):
+                 mode_recompense="naive", coefficient_distance=2.0,
+                 depart_aleatoire=False, seed=None):
         self.l1, self.l2 = (float(longueurs[0]), float(longueurs[1]))
         self.cible = (float(cible[0]), float(cible[1]))
         self.pas_deg = int(pas_deg)
         self.tolerance = float(tolerance)
-        if mode_recompense not in ("naive", "smart"):
-            raise ValueError("mode_recompense doit valoir 'naive' ou 'smart'.")
+        if mode_recompense not in ("naive", "smart", "distance"):
+            raise ValueError("mode_recompense doit valoir 'naive', 'smart' ou 'distance'.")
         self.mode_recompense = mode_recompense
         self.coefficient_distance = float(coefficient_distance)
+        self.depart_aleatoire = bool(depart_aleatoire)
+        self._rng = random.Random(seed)
         if (not math.isfinite(self.coefficient_distance)
                 or self.coefficient_distance < 0):
             raise ValueError("coefficient_distance doit etre fini et positif ou nul.")
@@ -62,6 +66,14 @@ class BrasRobotique2D(EnvironnementDiscret):
                 "Cible inatteignable avec ces longueurs, le pas "
                 "angulaire et la tolerance choisis."
             )
+
+        # Départs uniformes parmi les configurations qui ne touchent pas déjà la cible.
+        objectifs = set(self.etats_objectif)
+        self.etats_depart = tuple(
+            etat for etat in range(self.nb_etats) if etat not in objectifs
+        )
+        if self.depart_aleatoire and not self.etats_depart:
+            raise ValueError("Aucun état non terminal disponible pour les départs aléatoires.")
 
         self.etat = self.etat_initial
 
@@ -98,8 +110,16 @@ class BrasRobotique2D(EnvironnementDiscret):
         _, _, extremite = self.positions(etat)
         return math.dist(extremite, self.cible)
 
-    def reset(self):
-        self.etat = self.etat_initial
+    def reset(self, etat_depart=None):
+        """Choisit un départ aléatoire (si activé), ou impose un état pour tester."""
+        if etat_depart is not None:
+            if not isinstance(etat_depart, int) or not 0 <= etat_depart < self.nb_etats:
+                raise ValueError("Etat de départ invalide.")
+            self.etat = etat_depart
+        elif self.depart_aleatoire:
+            self.etat = self._rng.choice(self.etats_depart)
+        else:
+            self.etat = self.etat_initial
         return self.etat
 
     def actions_possibles(self, etat):
@@ -120,16 +140,19 @@ class BrasRobotique2D(EnvironnementDiscret):
             (i + di) % len(self.angles_theta1),
             (j + dj) % self.nb_theta2
         )
-        termine = self.distance_cible(self.etat) <= self.tolerance
+        distance_apres = self.distance_cible(self.etat)
+        termine = distance_apres <= self.tolerance
 
-        # Mode naif : seule l'arrivee rapporte une recompense.
         if self.mode_recompense == "naive":
             recompense = 10.0 if termine else -0.02
+        elif self.mode_recompense == "smart":
+            # Ancienne méthode : récompense basée sur la variation de distance.
+            recompense = self.coefficient_distance * (distance_avant - distance_apres) - 0.02
+            if termine:
+                recompense += 10.0
         else:
-            # Mode smart : recompense historique avec un coefficient
-            # reglable a la place de 2. Le bonus final s'ajoute.
-            variation_distance = distance_avant - self.distance_cible()
-            recompense = self.coefficient_distance * variation_distance - 0.02
+            # Nouvelle méthode : pénalité liée à la distance après l'action.
+            recompense = -distance_apres
             if termine:
                 recompense += 10.0
 
