@@ -115,70 +115,82 @@ Les angles vont de 0 a 350 degres inclus (360 equivaut a 0).
 Cela produit 36 x 36 = 1296 etats, sans contraintes de sol ni de quadrant.
 La cible peut avoir des coordonnees x et y negatives.
 
-La cible M0=(x0,y0) est **fixe pendant chaque entrainement**.
-Le bras part de (theta1,theta2)=(90,0) degres et tente d'atteindre
-M0=(1,1) avec une tolerance de 0.15 unite de longueur.
+La cible M0=(x0,y0) est **fixe pendant chaque entraînement**.
+Pendant l'entraînement, les deux angles initiaux sont tirés uniformément
+parmi les configurations discrètes non terminales à chaque épisode.
+La base du bras reste en (0,0), mais son extrémité démarre à des positions
+variées. Le départ historique (theta1, theta2)=(90,0) degrés reste utilisé
+comme référence d'évaluation, et la cible par défaut est M0=(1,1),
+avec une tolérance de 0.15 unité de longueur.
 Le simulateur verifie qu'une configuration discretisee peut atteindre
 la cible dans la tolerance choisie. La cible peut etre situee dans
 n'importe lequel des quatre quadrants, mais la portee physique
 reste limitee par les longueurs L1 et L2 : la distance a l'origine
 est comprise entre abs(L1-L2) et L1+L2 (avant discretisation).
 
-Deux recompenses sont disponibles pour le meme simulateur :
+Trois récompenses sont disponibles pour le même simulateur :
 
 - **Naive (parcimonieuse)** : `+10` lorsque la cible est atteinte,
-  `-0.02` sinon. Elle indique uniquement la reussite et le cout
-  des actions.
-- **Smart (guidee par la distance)** : on reprend la recompense
-  historique `c * (distance_avant - distance_apres) - 0.02`,
-  et on **ajoute 10** si la cible est atteinte.
-  Le coefficient `c` est configurable (valeur par defaut : `2.0`).
-  Exemple : distance de 1.0 a 0.8 avec `c=2`, la recompense
-  hors arrivee vaut `0.38`, et `10.38` a l'arrivee.
-  Le terme `-0.02` penalise les mouvements inutiles.
+  `-0.02` sinon.
+- **Smart (historique)** : `c * (distance_avant - distance_apres) - 0.02`,
+  avec un bonus `+10` si la cible est atteinte. Le coefficient `c`
+  est configurable (valeur par défaut : `2.0`). Par exemple,
+  passer de 1.0 à 0.8 donne `0.38` hors arrivée.
+- **Distance (nouvelle)** : `-distance_apres`, avec un bonus `+10`
+  si la cible est atteinte. La distance correspond à celle entre
+  l'extrémité du bras et la cible dans l'état obtenu après l'action ;
+  ce n'est pas la longueur physique des segments.
 
-Les deux variantes utilisent les memes etats, actions, angles, cibles
-et hyperparametres. Seule la fonction de recompense change.
-La recompense smart est plus informative pendant l'entrainement,
-mais n'assure pas necessairement le chemin le plus court.
-Les récompenses des deux modes ne sont pas directement comparables
-numériquement car leurs définitions sont différentes.
+Les trois variantes utilisent les mêmes états, actions, angles, cible
+et hyperparamètres. Seule la fonction de récompense change.
+Aucune des trois ne garantit à elle seule une politique optimale.
+Les récompenses numériques ne sont pas directement comparables :
+on évalue plutôt la proportion de réussites et la distance finale.
 
 Il s'agit d'un modele cinematique simplifie :
 il n'inclut pas la dynamique des moteurs ni les collisions pendant
 la rotation continue entre deux poses. Aucune butee articulaire
 n'est imposee dans cette simulation.
 
-### Lancer les robots (naif et smart)
+### Lancer les trois modes du bras
 
-Les deux entrainements sont executes automatiquement, l'un apres l'autre :
+Les trois entraînements (naive, smart, distance) sont exécutés
+automatiquement l'un après l'autre :
 
 ```bash
 py -m experiences.entrainement_bras_robotique
 ```
 
-On peut aussi choisir un seul mode, le coefficient de rapprochement
+On peut aussi choisir un mode, le coefficient du seul mode smart
 et la seed :
 
 ```bash
 py -m experiences.entrainement_bras_robotique --mode naive
 py -m experiences.entrainement_bras_robotique --mode smart --coefficient 2 --seed 42
-py -m experiences.entrainement_bras_robotique --mode smart --coefficient 0.5 --seed 42
+py -m experiences.entrainement_bras_robotique --mode distance --seed 42
 ```
 
-Par defaut, `--coefficient 2` et `--seed 42`.
-La seed est appliquee de nouveau au debut de chaque entrainement :
-a conditions et versions logicielles identiques, on peut reproduire
-les experiences. Pour comparer differents coefficients, conserver
-la meme seed ; puis essayer plusieurs seeds pour verifier la robustesse.
+Par défaut, `--coefficient 2` et `--seed 42`.
+L'entraînement utilise 5 000 épisodes, `epsilon_min=0.15` et une
+décroissance de `0.9995` pour conserver davantage d'exploration.
+La graine est réappliquée à chaque mode ; le tirage des états de départ
+utilise un générateur indépendant du tirage des actions.
 
-Pour comparer les agents, prioriser le succes de l'evaluation sans
-exploration, le nombre de mouvements et la distance finale a la cible,
-plutot que la recompense brute : elle n'a pas la meme definition.
+Pour comparer les agents, chacun est testé sans exploration sur les
+**30 mêmes configurations initiales** tirées avec une graine indépendante.
+Le terminal affiche le taux de réussite, les mouvements moyens pour
+les essais réussis et la distance finale moyenne. Le départ historique
+(90°, 0°) est également testé séparément.
+Ces mesures sur une seule graine ne suffisent pas à prouver la convergence
+ni à établir qu'un mode est systématiquement supérieur.
 
-Les parametres (longueurs, pas angulaire, position cible, tolerance et
-nombre d'episodes) sont modifiables dans
+Les paramètres (longueurs, pas angulaire, position cible, tolérance et
+nombre d'épisodes) sont modifiables dans
 `experiences/entrainement_bras_robotique.py`.
+La classe `BrasRobotique2D` conserve aussi le départ fixe par défaut
+(`depart_aleatoire=False`) si elle est utilisée indépendamment du
+script d'entraînement ; `reset(etat_depart=...)` permet d'imposer
+un état lors d'une évaluation.
 
 A noter : si la cible change entre les episodes d'un meme entrainement,
 il faut integrer sa position dans l'etat RL ; cette premiere version
