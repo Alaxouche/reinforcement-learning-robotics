@@ -152,6 +152,17 @@ il n'inclut pas la dynamique des moteurs ni les collisions pendant
 la rotation continue entre deux poses. Aucune butee articulaire
 n'est imposee dans cette simulation.
 
+### Tests automatiques du bras
+
+Depuis la racine du dépôt :
+
+```bash
+py -m unittest discover -s tests -v
+```
+
+Les tests vérifient les trois fonctions de récompense, les départs
+aléatoires reproductibles et un petit entraînement sans affichage graphique.
+
 ### Lancer les trois modes du bras
 
 Les trois entraînements (naive, smart, distance) sont exécutés
