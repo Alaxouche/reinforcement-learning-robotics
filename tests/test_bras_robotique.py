@@ -4,15 +4,24 @@ import unittest
 import numpy as np
 
 from src.algorithmes.q_learning import QLearning
-from src.environnements.bras_robotique.bras_robotique_2d import BrasRobotique2D
+from src.environnements.bras_robotique.bras_robot_naive import BrasRobotNaive
+from src.environnements.bras_robotique.bras_robot_smart import BrasRobotSmart
+from src.environnements.bras_robotique.bras_robot_distance import BrasRobotDistance
 from experiences.entrainement_bras_robotique import suivre_politique
+
+
+CLASSES_BRAS = {
+    "naive": BrasRobotNaive,
+    "smart": BrasRobotSmart,
+    "distance": BrasRobotDistance,
+}
 
 
 class TestBrasRobotique(unittest.TestCase):
     def test_recompenses_ancienne_et_nouvelle(self):
         for mode in ("naive", "smart", "distance"):
             with self.subTest(mode=mode):
-                env = BrasRobotique2D(mode_recompense=mode)
+                env = CLASSES_BRAS[mode]()
                 env.reset(etat_depart=env.etat_initial)
                 distance_avant = env.distance_cible()
                 nouvel_etat, recompense, termine = env.step(0)
@@ -29,7 +38,7 @@ class TestBrasRobotique(unittest.TestCase):
     def test_recompense_terminale_sans_bonus_smart_ou_distance(self):
         for mode in ("smart", "distance"):
             with self.subTest(mode=mode):
-                env = BrasRobotique2D(mode_recompense=mode)
+                env = CLASSES_BRAS[mode]()
                 # Cherche une transition menant à la cible depuis un état non terminal.
                 transition = None
                 for etat in env.etats_depart:
@@ -48,8 +57,8 @@ class TestBrasRobotique(unittest.TestCase):
                 self.assertAlmostEqual(recompense, attendu)
 
     def test_depart_aleatoire_reproductible_et_non_terminal(self):
-        a = BrasRobotique2D(depart_aleatoire=True, seed=123, mode_recompense="smart")
-        b = BrasRobotique2D(depart_aleatoire=True, seed=123, mode_recompense="distance")
+        a = BrasRobotSmart(depart_aleatoire=True, seed=123)
+        b = BrasRobotDistance(depart_aleatoire=True, seed=123)
         departs_a = [a.reset() for _ in range(100)]
         departs_b = [b.reset() for _ in range(100)]
         self.assertEqual(departs_a, departs_b)
@@ -58,9 +67,9 @@ class TestBrasRobotique(unittest.TestCase):
         self.assertTrue(all(etat not in a.etats_objectif for etat in departs_a))
 
     def test_depart_fixe_et_depart_impose(self):
-        fixe = BrasRobotique2D()
+        fixe = BrasRobotNaive()
         self.assertEqual(fixe.reset(), fixe.etat_initial)
-        env = BrasRobotique2D(depart_aleatoire=True, seed=123)
+        env = BrasRobotNaive(depart_aleatoire=True, seed=123)
         etat_depart = env.etats_depart[10]
         self.assertEqual(env.reset(etat_depart=etat_depart), etat_depart)
         with self.assertRaises(ValueError):
@@ -68,7 +77,7 @@ class TestBrasRobotique(unittest.TestCase):
 
     def test_entrainement_et_evaluation(self):
         np.random.seed(42)
-        env = BrasRobotique2D(mode_recompense="distance", depart_aleatoire=True, seed=42)
+        env = BrasRobotDistance(depart_aleatoire=True, seed=42)
         agent = QLearning(
             environnement=env, alpha=0.2, gamma=0.95,
             epsilon=1.0, epsilon_min=0.15, decroissance=0.9995,
