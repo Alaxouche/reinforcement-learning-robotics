@@ -47,9 +47,5 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Graphiques generes lors des entrainements
-# Garder les dossiers visibles dans Git sans suivre leurs sorties.
-experiences/resultats/*
-!experiences/resultats/*/
-experiences/resultats/*/*
-!experiences/resultats/*/.gitkeep
+# Anciens résultats générés localement (non suivis)
+experiences/resultats/
