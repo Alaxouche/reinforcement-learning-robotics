@@ -19,9 +19,6 @@ from matplotlib.patches import Patch, Rectangle
 # Flèche de chaque action (dx, dy) : 0=haut, 1=bas, 2=gauche, 3=droite.
 # L'axe vertical est inversé (ligne 0 en haut), donc "haut" correspond à dy négatif.
 FLECHES_LABYRINTHE = [(0, -0.3), (0, 0.3), (-0.3, 0), (0.3, 0)]
-# Pour le bras : 0=theta1+, 1=theta1-, 2=theta2+, 3=theta2-. theta1 se lit en lignes.
-FLECHES_BRAS = [(0, 0.3), (0, -0.3), (0.3, 0), (-0.3, 0)]
-
 COULEURS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]  # une couleur par série
 ENCRE = "#0b0b0b"
 ENCRE_SECONDAIRE = "#52514e"
@@ -281,50 +278,6 @@ def graphe_convergence(algorithme, nom, fichier):
 
 
 # ---------------------------------------------------------------------------
-# Graphe 2 : impact d'epsilon sur la répétabilité (plusieurs seeds)
-# ---------------------------------------------------------------------------
-def graphe_epsilon_seeds(resultats, nom, fichier):
-    """resultats : une entrée par stratégie, avec
-    "label", "recompenses" (une liste par seed) et "convergences" (un nombre par seed).
-    """
-    fig, (ax_gauche, ax_droite) = plt.subplots(1, 2, figsize=(13, 5))
-
-    nb_episodes = len(resultats[0]["recompenses"][0])
-    fenetre = max(10, nb_episodes // 50)
-    episodes = np.arange(1, nb_episodes + 1)
-
-    # À gauche : moyenne des seeds, et bande de +/- un écart-type.
-    for res in resultats:
-        courbes = [moyenne_glissante(r, fenetre) for r in res["recompenses"]]
-        moyenne = np.mean(courbes, axis=0)
-        ecart = np.std(courbes, axis=0)
-        ligne, = ax_gauche.plot(episodes, moyenne, label=res["label"])
-        ax_gauche.fill_between(episodes, moyenne - ecart, moyenne + ecart,
-                               color=ligne.get_color(), alpha=0.15)
-
-    ax_gauche.set_xlabel("épisode")
-    ax_gauche.set_ylabel(f"récompense (moyenne glissante {fenetre})")
-    ax_gauche.set_title(f"Moyenne ± écart-type sur {len(resultats[0]['recompenses'])} seeds")
-    ax_gauche.legend()
-
-    # À droite : une boîte par stratégie, et un point par seed.
-    labels = [res["label"] for res in resultats]
-    convergences = [res["convergences"] for res in resultats]
-    ax_droite.boxplot(convergences, showfliers=False, medianprops={"color": ENCRE})
-    for i, valeurs in enumerate(convergences, start=1):
-        ax_droite.scatter([i] * len(valeurs), valeurs, s=20, zorder=3, color=COULEURS[i - 1])
-    ax_droite.set_xticks(range(1, len(labels) + 1))
-    ax_droite.set_xticklabels(labels, rotation=20, ha="right")
-    ax_droite.set_ylabel("épisode de convergence")
-    ax_droite.set_title("Convergence de la politique gloutonne (un point par seed)")
-
-    fig.suptitle(f"{nom} : impact d'epsilon sur la répétabilité")
-    fig.tight_layout()
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
-
-
-# ---------------------------------------------------------------------------
 # Graphe 3 : Q(s, a) brute en 2D, une carte par action
 # ---------------------------------------------------------------------------
 def graphe_cartes_q_brutes(algorithme, environnement, nom, fichier):
@@ -359,9 +312,9 @@ def graphe_cartes_q_brutes(algorithme, environnement, nom, fichier):
 def graphe_meilleure_action(algorithme, environnement, nom, fichier):
     colonnes = dimensions(environnement)[1]
     chemin, retour, atteint = chemin_glouton(algorithme, environnement)
-    fleches = FLECHES_BRAS if est_bras(environnement) else FLECHES_LABYRINTHE
-
-    fig, ax = plt.subplots(figsize=taille_carte(environnement), layout="constrained")
+    # Une grille 36 x 36 avec des noms d'actions demande davantage de place.
+    taille = (14, 13) if est_bras(environnement) else taille_carte(environnement)
+    fig, ax = plt.subplots(figsize=taille, layout="constrained")
     preparer_grille(ax, environnement)
 
     # Une flèche par état : la meilleure action. Un état jamais visité n'a rien appris.
@@ -370,9 +323,17 @@ def graphe_meilleure_action(algorithme, environnement, nom, fichier):
             colorier_case(ax, etat, colonnes, GRILLE)
         elif environnement.actions_possibles(etat):
             ligne, colonne = divmod(etat, colonnes)
-            dx, dy = fleches[algorithme.meilleure_action(etat)]
-            ax.arrow(colonne - dx, ligne - dy, 2 * dx, 2 * dy, head_width=0.15,
-                     length_includes_head=True, color=ENCRE, linewidth=0.5)
+            action = algorithme.meilleure_action(etat)
+            if est_bras(environnement):
+                # Au lieu de 1 296 flèches, écrire la rotation optimale par case.
+                etiquette = environnement.noms_actions[action].replace(" ", "")
+                ax.text(colonne, ligne, etiquette, ha="center", va="center",
+                        fontsize=4.5, fontweight="bold", color=ENCRE, zorder=4)
+            else:
+                dx, dy = FLECHES_LABYRINTHE[action]
+                ax.arrow(colonne - dx, ligne - dy, 2 * dx, 2 * dy,
+                         head_width=0.15, length_includes_head=True,
+                         color=ENCRE, linewidth=0.5)
 
     marquer_cases(ax, environnement)
 
@@ -387,68 +348,13 @@ def graphe_meilleure_action(algorithme, environnement, nom, fichier):
             y.append(np.nan)
         x.append(colonne)
         y.append(ligne)
-    ax.plot(x, y, color=COULEURS[1], linewidth=8, alpha=0.5, solid_capstyle="round")
+    # Le chemin doit rester visible sans masquer les noms d'actions.
+    ax.plot(x, y, color=COULEURS[1], linewidth=8, alpha=0.35,
+            solid_capstyle="round", zorder=2)
 
     statut = "objectif atteint" if atteint else "objectif non atteint"
     ax.set_title(f"{nom} : meilleure action argmax Q(s, a) et chemin glouton\n"
                  f"{len(chemin) - 1} déplacements, retour {retour:.2f}, {statut}")
-    legende_cases(fig, environnement, "état jamais visité")
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
-
-
-# ---------------------------------------------------------------------------
-# Graphe 5 : cartes couleur de Q(s, a), une par action, normalisées entre 0 et 1
-# ---------------------------------------------------------------------------
-def graphe_cartes_q(algorithme, environnement, nom, fichier):
-    grilles = [grille_q(algorithme, environnement, action)
-               for action in range(environnement.nb_actions)]
-
-    # Normalisation commune : la pire Q-value vaut 0, la meilleure vaut 1.
-    mini = np.nanmin(grilles)
-    maxi = np.nanmax(grilles)
-
-    taille = (12, 11) if est_bras(environnement) else (11, 10)
-    fig, axes = plt.subplots(2, 2, figsize=taille, layout="constrained")
-
-    for action, ax in enumerate(axes.flat):
-        normalisees = (grilles[action] - mini) / (maxi - mini)
-        image = ax.imshow(normalisees, cmap=BLEUS, vmin=0, vmax=1)
-        preparer_grille(ax, environnement)
-        marquer_cases(ax, environnement)
-        ax.set_title(environnement.noms_actions[action])
-
-        if not est_bras(environnement):
-            for (ligne, colonne), v in np.ndenumerate(normalisees):
-                if np.isfinite(v):
-                    ecrire_valeur(ax, ligne, colonne, f"{v:.2f}", v)
-
-    fig.colorbar(image, ax=axes, shrink=0.8, label="Q(s, a) normalisée")
-    fig.suptitle(f"{nom} : Q(s, a) par action (Q brute entre {mini:.2f} et {maxi:.2f})")
-    legende_cases(fig, environnement, "action impossible ou jamais essayée")
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
-
-
-# ---------------------------------------------------------------------------
-# Graphe 5b : carte couleur de V(s) sur les couples (theta1, theta2) du bras
-# ---------------------------------------------------------------------------
-def graphe_carte_valeurs(algorithme, environnement, nom, fichier):
-    valeurs = grille_valeurs(algorithme, environnement)
-
-    # Normalisation : la pire case vaut 0, la meilleure vaut 1.
-    mini = np.nanmin(valeurs)
-    maxi = np.nanmax(valeurs)
-    normalisees = (valeurs - mini) / (maxi - mini)
-
-    fig, ax = plt.subplots(figsize=taille_carte(environnement), layout="constrained")
-    image = ax.imshow(normalisees, cmap=BLEUS, vmin=0, vmax=1)
-    preparer_grille(ax, environnement)
-    marquer_cases(ax, environnement)
-
-    fig.colorbar(image, ax=ax, shrink=0.8, label="V(s) = max Q(s, a), normalisée")
-    ax.set_title(f"{nom} : carte de valeur des états\n"
-                 f"V brute entre {mini:.2f} et {maxi:.2f}")
     legende_cases(fig, environnement, "état jamais visité")
     fig.savefig(fichier, dpi=150)
     plt.close(fig)
