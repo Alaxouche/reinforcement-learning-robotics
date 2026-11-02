@@ -1,11 +1,8 @@
 """Génère les graphes d'analyse du labyrinthe et du bras robotique.
 
     1_convergence.png            récompense, pas et epsilon par épisode
-    2_epsilon_seeds.png          impact d'epsilon sur la répétabilité (seeds différentes)
     3_cartes_q_brutes.png        Q(s, a) brute en 2D, une carte par action
     4_meilleure_action.png       meilleure action dans chaque état et chemin suivi
-    5_cartes_q.png               carte couleur de Q(s, a), une par action
-    5b_carte_valeurs.png         carte couleur de V(s) sur (theta1, theta2), bras seulement
     6_visites.png                nombre de passages par état
     7_carte_epsilon.png          epsilon moyen par état, en fonction de V(s)
     8_mises_a_jour.png           nombre de mises à jour de chaque action
@@ -29,105 +26,38 @@ from src.visualisation import graphes
 
 DOSSIER_RESULTATS = Path(__file__).resolve().parent / "resultats"
 
-SEEDS = range(10)  # 10 entraînements différents par stratégie
 SEED_REFERENCE = 42  # même seed que experiences.entrainement
 
 # Mêmes réglages que les scripts d'entraînement.
-# "bloc" = nombre d'épisodes entre deux vérifications du chemin appris.
 EXPERIENCES = [
     {"nom": "Labyrinthe 5x5", "dossier": Path("labyrinthes"),
      "construire": lambda seed: Labyrinthe5x5(),
      "alpha": 0.1, "gamma": 0.9, "epsilon_min": 0.05, "decroissance": 0.99,
-     "nb_episodes": 1000, "max_pas": 30, "bloc": 10},
+     "nb_episodes": 1000, "max_pas": 30},
 ] + [
     {"nom": f"Bras robotique ({mode})", "dossier": Path("bras_robotique", mode),
      "construire": lambda seed, classe=classe: classe(depart_aleatoire=True, seed=seed),
      "alpha": 0.2, "gamma": 0.95, "epsilon_min": 0.15, "decroissance": 0.9995,
-     "nb_episodes": 5000, "max_pas": 50, "bloc": 50}
+     "nb_episodes": 5000, "max_pas": 50}
     for mode, classe in MODES_BRAS.items()
 ]
 
-# Stratégies d'exploration comparées sur le graphe 2 : (label, epsilon de départ, epsilon min).
-# Quand epsilon de départ = epsilon min, epsilon reste fixe. La décroissance de
-# l'entraînement, propre à chaque environnement, s'ajoute à cette liste.
-EPSILONS_FIXES = [
-    ("epsilon = 0.05 fixe", 0.05, 0.05),
-    ("epsilon = 0.2 fixe", 0.2, 0.2),
-    ("epsilon = 0.5 fixe", 0.5, 0.5),
-]
-
-
-def entrainer(config, epsilon, epsilon_min, seed):
-    """Entraîne un agent neuf et mesure à quel épisode il a convergé.
-
-    L'entraînement est découpé en blocs de config["bloc"] épisodes.
-    Après chaque bloc, on suit le chemin appris et on note son retour.
-    L'épisode de convergence est la fin du premier bloc à partir duquel
-    ce retour ne change plus jusqu'à la fin.
-    """
+def entrainer(config, seed):
+    """Entraîne une fois avec les mêmes paramètres que le script de référence."""
     np.random.seed(seed)
     environnement = config["construire"](seed)
     algorithme = QLearning(
         environnement=environnement,
         alpha=config["alpha"],
         gamma=config["gamma"],
-        epsilon=epsilon,
-        epsilon_min=epsilon_min,
+        epsilon=1.0,
+        epsilon_min=config["epsilon_min"],
         decroissance=config["decroissance"],
-        nb_episodes=config["bloc"],
+        nb_episodes=config["nb_episodes"],
         max_pas=config["max_pas"],
     )
-
-    # apprendre() vide ses listes à chaque appel : on les cumule ici.
-    recompenses, nombre_actions, epsilons, taux_exploration, retours = [], [], [], [], []
-
-    nb_blocs = config["nb_episodes"] // config["bloc"]
-    for _ in range(nb_blocs):
-        algorithme.apprendre()  # reprend avec la table Q et l'epsilon actuels
-        recompenses += algorithme.recompenses
-        nombre_actions += algorithme.nombre_actions
-        epsilons += algorithme.epsilons
-        taux_exploration += algorithme.taux_exploration
-        _, retour, _ = graphes.chemin_glouton(algorithme, environnement)
-        retours.append(retour)
-
-    algorithme.recompenses = recompenses
-    algorithme.nombre_actions = nombre_actions
-    algorithme.epsilons = epsilons
-    algorithme.taux_exploration = taux_exploration
-
-    # Premier bloc à partir duquel tous les retours sont égaux au dernier.
-    convergence = config["nb_episodes"]
-    for i in range(nb_blocs):
-        if all(r == retours[-1] for r in retours[i:]):
-            convergence = (i + 1) * config["bloc"]
-            break
-
-    return algorithme, environnement, convergence
-
-
-def comparer_epsilons(config):
-    """Entraîne chaque stratégie sur chaque seed (données du graphe 2)."""
-    resultats = []
-    decroissance = (f"epsilon 1 -> {config['epsilon_min']}", 1.0, config["epsilon_min"])
-
-    for label, epsilon, epsilon_min in EPSILONS_FIXES + [decroissance]:
-        recompenses, convergences, retours = [], [], []
-
-        for seed in SEEDS:
-            algorithme, environnement, convergence = entrainer(config, epsilon, epsilon_min, seed)
-            recompenses.append(algorithme.recompenses)
-            convergences.append(convergence)
-            retours.append(graphes.chemin_glouton(algorithme, environnement)[1])
-
-        resultats.append({"label": label, "recompenses": recompenses,
-                          "convergences": convergences})
-
-        print(f"    {label:<22} convergence : moyenne {np.mean(convergences):7.1f}, "
-              f"écart-type {np.std(convergences):6.1f} | retour glouton final : "
-              f"{np.mean(retours):.2f} +/- {np.std(retours):.2f}")
-
-    return resultats
+    algorithme.apprendre()
+    return algorithme, environnement
 
 
 def afficher_comparaison(agents):
@@ -161,24 +91,20 @@ def main():
         nom = config["nom"]
         dossier = DOSSIER_RESULTATS / config["dossier"]
         dossier.mkdir(parents=True, exist_ok=True)
+        # Évite de conserver des images obsolètes créées par l'ancienne version.
+        for ancien in ("2_epsilon_seeds.png", "5_cartes_q.png", "5b_carte_valeurs.png"):
+            (dossier / ancien).unlink(missing_ok=True)
         print(f"\n{nom}")
 
-        # Agent de référence pour tous les graphes sauf le 2 : l'entraînement du projet.
-        algorithme, environnement, _ = entrainer(config, 1.0, config["epsilon_min"],
-                                                 SEED_REFERENCE)
+        # Même entraînement que les expériences de référence (seed 42).
+        algorithme, environnement = entrainer(config, SEED_REFERENCE)
         agents.append((nom, algorithme, environnement))
 
         graphes.graphe_convergence(algorithme, nom, dossier / "1_convergence.png")
-        graphes.graphe_epsilon_seeds(comparer_epsilons(config), nom,
-                                     dossier / "2_epsilon_seeds.png")
         graphes.graphe_cartes_q_brutes(algorithme, environnement, nom,
                                        dossier / "3_cartes_q_brutes.png")
         graphes.graphe_meilleure_action(algorithme, environnement, nom,
                                         dossier / "4_meilleure_action.png")
-        graphes.graphe_cartes_q(algorithme, environnement, nom, dossier / "5_cartes_q.png")
-        if graphes.est_bras(environnement):
-            graphes.graphe_carte_valeurs(algorithme, environnement, nom,
-                                         dossier / "5b_carte_valeurs.png")
         graphes.graphe_visites(algorithme, environnement, nom, dossier / "6_visites.png")
         graphes.graphe_carte_epsilon(algorithme, environnement, nom,
                                      dossier / "7_carte_epsilon.png")
