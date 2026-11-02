@@ -20,8 +20,7 @@ class BrasRobotique2D(EnvironnementDiscret):
 
     def __init__(self, longueurs=(1.0, 1.0), cible=(1.0, 1.0),
                  pas_deg=10, angles_initiaux=(90, 0), tolerance=0.15,
-                 mode_recompense="naive", coefficient_distance=2.0,
-                 depart_aleatoire=False, seed=None):
+                 mode_recompense="naive", depart_aleatoire=False, seed=None):
         self.l1, self.l2 = (float(longueurs[0]), float(longueurs[1]))
         self.cible = (float(cible[0]), float(cible[1]))
         self.pas_deg = int(pas_deg)
@@ -29,12 +28,8 @@ class BrasRobotique2D(EnvironnementDiscret):
         if mode_recompense not in ("naive", "smart", "distance"):
             raise ValueError("mode_recompense doit valoir 'naive', 'smart' ou 'distance'.")
         self.mode_recompense = mode_recompense
-        self.coefficient_distance = float(coefficient_distance)
         self.depart_aleatoire = bool(depart_aleatoire)
         self._rng = random.Random(seed)
-        if (not math.isfinite(self.coefficient_distance)
-                or self.coefficient_distance < 0):
-            raise ValueError("coefficient_distance doit etre fini et positif ou nul.")
 
         if self.l1 <= 0 or self.l2 <= 0:
             raise ValueError("Les longueurs doivent etre strictement positives.")
@@ -133,7 +128,7 @@ class BrasRobotique2D(EnvironnementDiscret):
     def step(self, action):
         if action not in self.actions_possibles(self.etat):
             raise ValueError("Action impossible : cible deja atteinte ou action inconnue.")
-        distance_avant = self.distance_cible() if self.mode_recompense == "smart" else None
+        distance_avant = self.distance_cible() if self.mode_recompense == "distance" else None
         i, j = divmod(self.etat, self.nb_theta2)
         di, dj = self._deplacements[action]
         self.etat = self._indices_vers_etat(
@@ -146,14 +141,8 @@ class BrasRobotique2D(EnvironnementDiscret):
         if self.mode_recompense == "naive":
             recompense = 10.0 if termine else -0.02
         elif self.mode_recompense == "smart":
-            # Ancienne méthode : récompense basée sur la variation de distance.
-            recompense = self.coefficient_distance * (distance_avant - distance_apres) - 0.02
-            if termine:
-                recompense += 10.0
-        else:
-            # Nouvelle méthode : pénalité liée à la distance après l'action.
             recompense = -distance_apres
-            if termine:
-                recompense += 10.0
+        else:  # distance
+            recompense = distance_avant - distance_apres
 
         return self.etat, float(recompense), termine
