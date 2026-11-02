@@ -1,12 +1,9 @@
 """Expérience : Q-learning sur le labyrinthe 5 x 5."""
 
-from pathlib import Path
 import numpy as np
 
 from src.environnements.labyrinthe.labyrinthe_5x5 import Labyrinthe5x5
 from src.algorithmes.q_learning import QLearning
-from experiences.graphiques import generer_graphiques
-from experiences.graphes_analyse import generer_graphes_analyse
 
 
 def main():
@@ -18,29 +15,6 @@ def main():
         decroissance=0.99, nb_episodes=1000, max_pas=30
     )
     algorithme.apprendre()
-
-    racine_resultats = Path(__file__).resolve().parent / "resultats"
-    dossier = racine_resultats / "labyrinthes"
-    dossier.mkdir(parents=True, exist_ok=True)
-
-    # Déplace les anciens graphiques placés dans resultats/.
-    noms_graphiques = (
-        "01_recompenses.png", "02_nombre_actions.png", "03_variation_q.png",
-        "04_couverture_etats.png", "05_epsilon_exploration.png",
-        "05_erreur_td.png", "06_erreur_td.png",
-        "06_evaluation_sans_exploration.png", "07_evaluation_sans_exploration.png",
-    )
-    for nom in noms_graphiques:
-        ancien = racine_resultats / nom
-        if ancien.is_file():
-            ancien.replace(dossier / nom)
-
-    fichiers = generer_graphiques(algorithme, dossier=dossier)
-    fichiers += generer_graphes_analyse(algorithme, environnement, dossier,
-                                        "Labyrinthe 5×5")
-    print("\nGRAPHIQUES GÉNÉRÉS")
-    for fichier in fichiers:
-        print(f" - {fichier}")
 
     print("\nTABLE Q")
     print("=" * 62)
