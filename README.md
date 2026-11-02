@@ -10,20 +10,29 @@ reinforcement-learning-robotics/
 │   ├── algorithmes/
 │   │   └── q_learning.py
 │   │
-│   └── environnements/
-│       ├── environnement_discret.py
-│       ├── labyrinthe/
-│       │   ├── labyrinthe.py
-│       │   └── labyrinthe_5x5.py
-│       └── bras_robotique/
-│           ├── bras_robotique_2d.py   # Mécanique commune
-│           ├── bras_robot_naive.py    # +10 / -0.02
-│           ├── bras_robot_smart.py    # -d(k+1)
-│           └── bras_robot_distance.py # d(k) - d(k+1)
+│   ├── environnements/
+│   │   ├── environnement_discret.py
+│   │   ├── labyrinthe/
+│   │   │   ├── labyrinthe.py
+│   │   │   └── labyrinthe_5x5.py
+│   │   └── bras_robotique/
+│   │       ├── bras_robotique_2d.py   # Mécanique commune
+│   │       ├── bras_robot_naive.py    # +10 / -0.02
+│   │       ├── bras_robot_smart.py    # -d(k+1)
+│   │       └── bras_robot_distance.py # d(k) - d(k+1)
+│   │
+│   └── visualisation/
+│       └── graphes.py                 # Fonctions de tracé
 │
 ├── experiences/
 │   ├── entrainement.py
-│   └── entrainement_bras_robotique.py
+│   ├── entrainement_bras_robotique.py
+│   ├── graphes.py                     # Génère tous les graphes
+│   └── README_graphes.md
+│
+├── tests/
+│   ├── test_bras_robotique.py
+│   └── test_graphes.py
 │
 ├── requirements.txt
 └── README.md
@@ -33,7 +42,8 @@ Cette organisation reste volontairement simple :
 
 - `src/algorithmes/` contient l'algorithme Q-learning ;
 - `src/environnements/` contient les classes liées aux environnements ;
-- `experiences/` contient le script qui assemble un environnement et l'algorithme pour lancer un entraînement.
+- `src/visualisation/` contient les fonctions de tracé ;
+- `experiences/` contient les scripts qui assemblent un environnement et l'algorithme.
 
 ## Héritage des environnements
 
@@ -98,6 +108,19 @@ Depuis la racine du projet :
 ```bash
 py -m experiences.entrainement
 ```
+
+## Graphiques
+
+Les scripts d'entraînement affichent leurs résultats dans le terminal, sans produire
+d'image. Les graphes viennent d'un seul programme, qui entraîne le labyrinthe et les
+trois modes du bras (environ 7 minutes) :
+
+```bash
+py -m experiences.graphes
+```
+
+Liste des graphes, lecture et comparaison labyrinthe / bras :
+[experiences/README_graphes.md](experiences/README_graphes.md).
 
 ## Deuxieme environnement : bras robotique 2D
 
@@ -173,6 +196,8 @@ py -m unittest discover -s tests -v
 
 Les tests vérifient les trois fonctions de récompense, les départs
 aléatoires reproductibles et un petit entraînement sans affichage graphique.
+`tests/test_graphes.py` vérifie les compteurs utilisés par les graphes, et que
+les graphes ne modifient pas l'entraînement.
 
 ### Lancer les trois modes du bras
 

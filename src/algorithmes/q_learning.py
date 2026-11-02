@@ -25,8 +25,19 @@ class QLearning:
         self.nb_episodes = nb_episodes
         self.max_pas = max_pas
 
+        self.recompenses = []
+        self.nombre_actions = []
+        self.epsilons = []  # Epsilon utilisé pour chaque épisode (avant décroissance).
+        self.taux_exploration = []  # Part d'actions tirées au hasard dans chaque épisode.
+
         # Une ligne par état, une colonne par action.
         self.Q = np.zeros((self.env.nb_etats, self.env.nb_actions), dtype=float)
+
+        # Compteurs cumulés : comme la table Q, ils survivent aux appels à apprendre().
+        self.visites = np.zeros(self.env.nb_etats, dtype=int)
+        self.somme_epsilons = np.zeros(self.env.nb_etats)  # Somme d'epsilon à chaque visite.
+        self.mises_a_jour = np.zeros_like(self.Q, dtype=int)
+        self.explorations = np.zeros_like(self.Q, dtype=int)  # Mises à jour dues au hasard.
 
     def meilleure_action(self, etat):
         """Renvoie l'action autorisée possédant la plus grande Q-value."""
@@ -37,24 +48,39 @@ class QLearning:
         return int(actions[indice])
 
     def choisir_action(self, etat):
-        """Choisit une action avec la stratégie epsilon-greedy."""
+        """Choisit une action epsilon-greedy, renvoie (action, tirée_au_hasard)."""
         actions = list(self.env.actions_possibles(etat))
         if not actions:
             raise ValueError("Aucune action possible dans cet état.")
         if np.random.random() < self.epsilon:
-            return int(np.random.choice(actions))
-        return self.meilleure_action(etat)
+            return int(np.random.choice(actions)), True
+        return self.meilleure_action(etat), False
+
+    def compter_visite(self, etat):
+        self.visites[etat] += 1
+        self.somme_epsilons[etat] += self.epsilon
 
     def apprendre(self):
-        """Entraine le Q-learning sans collecter de données pour des graphiques."""
+        """Entraine le Q-learning et collecte les indicateurs par épisode."""
+        self.recompenses = []
+        self.nombre_actions = []
+        self.epsilons = []
+        self.taux_exploration = []
+
         for _ in range(self.nb_episodes):
+            self.epsilons.append(float(self.epsilon))
             etat = self.env.reset()
+            self.compter_visite(etat)
+            total = 0.0
+            compteur = 0
+            nb_explorations = 0
             for _ in range(self.max_pas):
                 actions = self.env.actions_possibles(etat)
                 if not actions:
                     break
-                action = self.choisir_action(etat)
+                action, exploration = self.choisir_action(etat)
                 nouvel_etat, recompense, termine = self.env.step(action)
+                self.compter_visite(nouvel_etat)
                 if termine:
                     valeur_future = 0.0
                 else:
@@ -66,8 +92,16 @@ class QLearning:
                 cible = recompense + self.gamma * valeur_future
                 erreur_td = cible - self.Q[etat, action]
                 self.Q[etat, action] += self.alpha * erreur_td
+                self.mises_a_jour[etat, action] += 1
+                self.explorations[etat, action] += exploration
+                nb_explorations += exploration
+                total += recompense
+                compteur += 1
                 etat = nouvel_etat
                 if termine:
                     break
+            self.recompenses.append(float(total))
+            self.nombre_actions.append(compteur)
+            self.taux_exploration.append(nb_explorations / compteur if compteur else 0.0)
             self.epsilon = max(self.epsilon_min, self.epsilon * self.decroissance)
         return self.Q
