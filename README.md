@@ -20,14 +20,7 @@ reinforcement-learning-robotics/
 │
 ├── experiences/
 │   ├── entrainement.py
-│   ├── entrainement_bras_robotique.py
-│   ├── graphiques.py
-│   ├── graphes_analyse.py
-│   ├── comparer_exploration.py
-│   ├── README_graphes.md
-│   └── resultats/
-│       ├── labyrinthes/
-│       └── bras_robotique/
+│   └── entrainement_bras_robotique.py
 │
 ├── requirements.txt
 └── README.md
@@ -103,45 +96,6 @@ Depuis la racine du projet :
 py -m experiences.entrainement
 ```
 
-## Graphiques d'apprentissage
-
-`py -m experiences.entrainement` enregistre automatiquement 6 PNG dans
-`experiences/resultats/labyrinthes/` :
-
-1. recompense cumulee par episode et moyenne glissante ;
-2. nombre d'actions par episode ;
-3. variation maximale de la Q-table ;
-4. couverture cumulee des etats ;
-5. moyenne de la valeur absolue de l'erreur TD ;
-6. recompense moyenne lors de l'evaluation sans exploration.
-
-Les mesures proviennent des attributs de `QLearning`, sans dependance
-aux labyrinthes. Le dernier graphique repose sur des evaluations
-periodiques de la politique gloutonne (5 episodes, aucune mise a jour
-de la table Q). Le terme "couverture" designe le pourcentage d'etats
-declares deja rencontres depuis le debut de l'entrainement.
-
-Les graphiques produits sont ignores par Git et peuvent etre recrees
-en relancant l'entrainement. Les labyrinthes enregistrent les images dans
-`experiences/resultats/labyrinthes/` et le bras robotique dans
-`experiences/resultats/bras_robotique/`. Au prochain entrainement
-du labyrinthe, les anciens PNG generes directement dans
-`experiences/resultats/` sont deplaces dans le dossier `labyrinthes/`.
-
-## Graphiques d'analyse par action
-
-Les commandes habituelles de l'entraînement génèrent désormais **6 graphiques génériques et 7 analyses supplémentaires** par environnement : triptyque récompenses/actions/epsilon, Q-values en 3D, meilleure action par état et **4 cartes bleues distinctes des Q-values par action** (aucune carte globale \u00ab max Q \u00bb). Pour le bras, les quatre cartes utilisent le plan des deux angles et affichent les rotations theta1+/theta1-/theta2+/theta2-.
-
-Le comparatif entre epsilon et plusieurs seeds est volontairement séparé (car il réentraîne plusieurs agents) :
-
-```bash
-py -m experiences.comparer_exploration --environnement labyrinthe
-py -m experiences.comparer_exploration --environnement bras --mode naive
-py -m experiences.comparer_exploration --environnement bras --mode smart
-```
-
-Explications, fichiers produits et options : [experiences/README_graphes.md](experiences/README_graphes.md).
-
 ## Deuxieme environnement : bras robotique 2D
 
 Le robot comporte deux segments de longueurs L1 et L2 fixes.
@@ -187,8 +141,8 @@ Les deux variantes utilisent les memes etats, actions, angles, cibles
 et hyperparametres. Seule la fonction de recompense change.
 La recompense smart est plus informative pendant l'entrainement,
 mais n'assure pas necessairement le chemin le plus court.
-Les courbes de recompenses des deux modes ne sont pas directement
-comparables numeriquement car leurs definitions sont differentes.
+Les récompenses des deux modes ne sont pas directement comparables
+numériquement car leurs définitions sont différentes.
 
 Il s'agit d'un modele cinematique simplifie :
 il n'inclut pas la dynamique des moteurs ni les collisions pendant
@@ -217,19 +171,6 @@ La seed est appliquee de nouveau au debut de chaque entrainement :
 a conditions et versions logicielles identiques, on peut reproduire
 les experiences. Pour comparer differents coefficients, conserver
 la meme seed ; puis essayer plusieurs seeds pour verifier la robustesse.
-
-Chaque execution enregistre six graphiques et la trajectoire
-dans un sous-dossier identifie par les parametres :
-
-```text
-experiences/resultats/bras_robotique/
-  naive/seed_42/
-    01_recompenses.png ... 07_trajectoire_bras.png
-  smart/coefficient_2_seed_42/
-    01_recompenses.png ... 07_trajectoire_bras.png
-  smart/coefficient_0_5_seed_42/
-    01_recompenses.png ... 07_trajectoire_bras.png
-```
 
 Pour comparer les agents, prioriser le succes de l'evaluation sans
 exploration, le nombre de mouvements et la distance finale a la cible,
