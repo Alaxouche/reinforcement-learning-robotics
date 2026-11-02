@@ -29,13 +29,12 @@ def suivre_politique(algorithme, etat_depart):
     return etats, termine
 
 
-def entrainer_mode(mode, coefficient_distance=2.0, seed=42):
+def entrainer_mode(mode, seed=42):
     np.random.seed(seed)
     environnement = BrasRobotique2D(
         longueurs=(1.0, 1.0), cible=(1.0, 1.0), pas_deg=10,
         angles_initiaux=(90, 0), tolerance=0.15,
-        mode_recompense=mode, coefficient_distance=coefficient_distance,
-        depart_aleatoire=True, seed=seed
+        mode_recompense=mode, depart_aleatoire=True, seed=seed
     )
     algorithme = QLearning(
         environnement=environnement,
@@ -79,8 +78,6 @@ def entrainer_mode(mode, coefficient_distance=2.0, seed=42):
 
     print(f"\nBRAS ROBOTIQUE - RÉCOMPENSE {mode.upper()}")
     print(f"Seed : {seed}")
-    if mode == "smart":
-        print(f"Coefficient de distance : {coefficient_distance}")
     print(f"Cible M0 : {environnement.cible}")
     print(f"États discrets : {environnement.nb_etats}")
     print("Départ aléatoire non terminal à chaque épisode d'entraînement.")
@@ -97,13 +94,11 @@ def entrainer_mode(mode, coefficient_distance=2.0, seed=42):
     return algorithme, bilan
 
 
-def main(mode="tous", coefficient_distance=2.0, seed=42):
+def main(mode="tous", seed=42):
     modes = ("naive", "smart", "distance") if mode == "tous" else (mode,)
     resultats = {}
     for nom in modes:
-        resultats[nom] = entrainer_mode(
-            nom, coefficient_distance=coefficient_distance, seed=seed
-        )
+        resultats[nom] = entrainer_mode(nom, seed=seed)
     if len(resultats) > 1:
         print("\nCOMPARAISON : MÊME BRAS, MÊMES DÉPARTS DE TEST")
         for nom in modes:
@@ -122,8 +117,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "--mode", choices=("naive", "smart", "distance", "tous"), default="tous"
     )
-    parser.add_argument("--coefficient", type=float, default=2.0)
     parser.add_argument("--seed", type=int, default=42)
     arguments = parser.parse_args()
-    main(mode=arguments.mode, coefficient_distance=arguments.coefficient,
-         seed=arguments.seed)
+    main(mode=arguments.mode, seed=arguments.seed)
