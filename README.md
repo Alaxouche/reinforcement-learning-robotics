@@ -112,14 +112,22 @@ py -m experiences.entrainement
 ## Graphiques
 
 Les scripts d'entraînement affichent leurs résultats dans le terminal, sans produire
-d'image. Les graphes viennent d'un seul programme, qui entraîne le labyrinthe et les
-trois modes du bras (environ 7 minutes) :
+d'image. Un seul programme entraîne le labyrinthe et les trois modes du bras,
+puis enregistre les graphiques PNG :
 
 ```bash
+py -m pip install -r requirements.txt
 py -m experiences.graphes
 ```
 
-Liste des graphes, lecture et comparaison labyrinthe / bras :
+Les graphes conservés sont : convergence (1), Q-values brutes (3),
+meilleure action (4), visites (6), carte epsilon (7), mises à jour (8),
+lien avec epsilon-greedy (9), ainsi qu'une comparaison globale.
+Le graphe 4 dessine des **flèches dans le labyrinthe**, mais des
+**étiquettes theta1+/theta1-/theta2+/theta2- pour le bras**.
+
+Les images sont enregistrées dans `experiences/resultats/`.
+Pour interpréter les graphiques :
 [experiences/README_graphes.md](experiences/README_graphes.md).
 
 ## Deuxieme environnement : bras robotique 2D
