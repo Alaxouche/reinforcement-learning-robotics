@@ -4,6 +4,7 @@ Angles en degres : theta1 par rapport a l'horizontale ;
 theta2 relatif au premier segment. Mouvement libre dans tout le plan 2D.
 """
 
+from abc import abstractmethod
 import math
 import random
 
@@ -20,14 +21,11 @@ class BrasRobotique2D(EnvironnementDiscret):
 
     def __init__(self, longueurs=(1.0, 1.0), cible=(1.0, 1.0),
                  pas_deg=10, angles_initiaux=(90, 0), tolerance=0.15,
-                 mode_recompense="naive", depart_aleatoire=False, seed=None):
+                 depart_aleatoire=False, seed=None):
         self.l1, self.l2 = (float(longueurs[0]), float(longueurs[1]))
         self.cible = (float(cible[0]), float(cible[1]))
         self.pas_deg = int(pas_deg)
         self.tolerance = float(tolerance)
-        if mode_recompense not in ("naive", "smart", "distance"):
-            raise ValueError("mode_recompense doit valoir 'naive', 'smart' ou 'distance'.")
-        self.mode_recompense = mode_recompense
         self.depart_aleatoire = bool(depart_aleatoire)
         self._rng = random.Random(seed)
 
@@ -125,10 +123,16 @@ class BrasRobotique2D(EnvironnementDiscret):
         # Aucun mur, aucune butee : rotation circulaire dans les deux sens.
         return [0, 1, 2, 3]
 
+    @abstractmethod
+    def _recompense_transition(self, distance_avant, distance_apres, termine):
+        """Récompense spécifique à chaque version du bras robotique."""
+        pass
+
     def step(self, action):
         if action not in self.actions_possibles(self.etat):
-            raise ValueError("Action impossible : cible deja atteinte ou action inconnue.")
-        distance_avant = self.distance_cible() if self.mode_recompense == "distance" else None
+            raise ValueError("Action impossible : cible déjà atteinte ou action inconnue.")
+
+        distance_avant = self.distance_cible()
         i, j = divmod(self.etat, self.nb_theta2)
         di, dj = self._deplacements[action]
         self.etat = self._indices_vers_etat(
@@ -137,12 +141,7 @@ class BrasRobotique2D(EnvironnementDiscret):
         )
         distance_apres = self.distance_cible(self.etat)
         termine = distance_apres <= self.tolerance
-
-        if self.mode_recompense == "naive":
-            recompense = 10.0 if termine else -0.02
-        elif self.mode_recompense == "smart":
-            recompense = -distance_apres
-        else:  # distance
-            recompense = distance_avant - distance_apres
-
+        recompense = self._recompense_transition(
+            distance_avant, distance_apres, termine
+        )
         return self.etat, float(recompense), termine
