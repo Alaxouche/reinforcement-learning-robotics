@@ -132,14 +132,14 @@ Trois récompenses sont disponibles pour le même simulateur :
 
 - **Naive (parcimonieuse)** : `+10` lorsque la cible est atteinte,
   `-0.02` sinon.
-- **Smart (historique)** : `c * (distance_avant - distance_apres) - 0.02`,
-  avec un bonus `+10` si la cible est atteinte. Le coefficient `c`
-  est configurable (valeur par défaut : `2.0`). Par exemple,
-  passer de 1.0 à 0.8 donne `0.38` hors arrivée.
-- **Distance (nouvelle)** : `-distance_apres`, avec un bonus `+10`
-  si la cible est atteinte. La distance correspond à celle entre
-  l'extrémité du bras et la cible dans l'état obtenu après l'action ;
-  ce n'est pas la longueur physique des segments.
+- **Smart** : `-distance_apres`. On pénalise directement la distance
+  de l'extrémité du bras à la cible après l'action.
+- **Distance** : `distance_avant - distance_apres`. On évalue la
+  différence de distance à la cible entre les deux positions.
+
+Seul le mode naive utilise un bonus `+10` à l'arrivée et une pénalité
+`-0.02` en dehors de la cible. Smart et distance utilisent exactement
+les formules indiquées, sans coefficient, pénalité fixe ni bonus d'arrivée.
 
 Les trois variantes utilisent les mêmes états, actions, angles, cible
 et hyperparamètres. Seule la fonction de récompense change.
@@ -172,16 +172,15 @@ automatiquement l'un après l'autre :
 py -m experiences.entrainement_bras_robotique
 ```
 
-On peut aussi choisir un mode, le coefficient du seul mode smart
-et la seed :
+On peut aussi choisir un mode et la seed :
 
 ```bash
 py -m experiences.entrainement_bras_robotique --mode naive
-py -m experiences.entrainement_bras_robotique --mode smart --coefficient 2 --seed 42
+py -m experiences.entrainement_bras_robotique --mode smart --seed 42
 py -m experiences.entrainement_bras_robotique --mode distance --seed 42
 ```
 
-Par défaut, `--coefficient 2` et `--seed 42`.
+Par défaut, `--seed 42`.
 L'entraînement utilise 5 000 épisodes, `epsilon_min=0.15` et une
 décroissance de `0.9995` pour conserver davantage d'exploration.
 La graine est réappliquée à chaque mode ; le tirage des états de départ
