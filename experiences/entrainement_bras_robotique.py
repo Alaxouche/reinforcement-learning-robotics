@@ -9,7 +9,9 @@ import random
 import numpy as np
 
 from src.algorithmes.q_learning import QLearning
-from src.environnements.bras_robotique.bras_robotique_2d import BrasRobotique2D
+from src.environnements.bras_robotique.bras_robot_naive import BrasRobotNaive
+from src.environnements.bras_robotique.bras_robot_smart import BrasRobotSmart
+from src.environnements.bras_robotique.bras_robot_distance import BrasRobotDistance
 
 
 def suivre_politique(algorithme, etat_depart):
@@ -29,12 +31,19 @@ def suivre_politique(algorithme, etat_depart):
     return etats, termine
 
 
+MODES_BRAS = {
+    "naive": BrasRobotNaive,
+    "smart": BrasRobotSmart,
+    "distance": BrasRobotDistance,
+}
+
+
 def entrainer_mode(mode, seed=42):
     np.random.seed(seed)
-    environnement = BrasRobotique2D(
+    environnement = MODES_BRAS[mode](
         longueurs=(1.0, 1.0), cible=(1.0, 1.0), pas_deg=10,
         angles_initiaux=(90, 0), tolerance=0.15,
-        mode_recompense=mode, depart_aleatoire=True, seed=seed
+        depart_aleatoire=True, seed=seed
     )
     algorithme = QLearning(
         environnement=environnement,
