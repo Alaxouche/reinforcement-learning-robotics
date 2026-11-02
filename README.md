@@ -16,7 +16,10 @@ reinforcement-learning-robotics/
 │       │   ├── labyrinthe.py
 │       │   └── labyrinthe_5x5.py
 │       └── bras_robotique/
-│           └── bras_robotique_2d.py
+│           ├── bras_robotique_2d.py   # Mécanique commune
+│           ├── bras_robot_naive.py    # +10 / -0.02
+│           ├── bras_robot_smart.py    # -d(k+1)
+│           └── bras_robot_distance.py # d(k) - d(k+1)
 │
 ├── experiences/
 │   ├── entrainement.py
@@ -128,6 +131,14 @@ n'importe lequel des quatre quadrants, mais la portee physique
 reste limitee par les longueurs L1 et L2 : la distance a l'origine
 est comprise entre abs(L1-L2) et L1+L2 (avant discretisation).
 
+La mécanique est partagée dans `bras_robotique_2d.py` (géométrie,
+actions, transitions, tirages aléatoires). Les récompenses sont définies
+dans **trois fichiers distincts**, chacun contenant une classe de bras :
+
+- `bras_robot_naive.py` → `BrasRobotNaive`
+- `bras_robot_smart.py` → `BrasRobotSmart`
+- `bras_robot_distance.py` → `BrasRobotDistance`
+
 Trois récompenses sont disponibles pour le même simulateur :
 
 - **Naive (parcimonieuse)** : `+10` lorsque la cible est atteinte,
@@ -197,10 +208,10 @@ ni à établir qu'un mode est systématiquement supérieur.
 Les paramètres (longueurs, pas angulaire, position cible, tolérance et
 nombre d'épisodes) sont modifiables dans
 `experiences/entrainement_bras_robotique.py`.
-La classe `BrasRobotique2D` conserve aussi le départ fixe par défaut
-(`depart_aleatoire=False`) si elle est utilisée indépendamment du
-script d'entraînement ; `reset(etat_depart=...)` permet d'imposer
-un état lors d'une évaluation.
+Les trois classes dérivent de la base commune `BrasRobotique2D`.
+Le départ reste fixe par défaut (`depart_aleatoire=False`) si une
+de ces classes est utilisée indépendamment du script d'entraînement.
+`reset(etat_depart=...)` permet d'imposer un état pour une évaluation.
 
 A noter : si la cible change entre les episodes d'un meme entrainement,
 il faut integrer sa position dans l'etat RL ; cette premiere version
