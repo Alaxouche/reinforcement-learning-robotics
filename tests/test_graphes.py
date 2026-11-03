@@ -80,6 +80,30 @@ class TestChemin(unittest.TestCase):
         self.assertTrue(np.array_equal(par_script.Q, complet.Q))
 
 
+    def test_depart_s_uniquement_pour_labyrinthe(self):
+        """Les cartes du bras n'indiquent aucun départ fixe."""
+        ax = mock.Mock()
+        graphes.marquer_cases(ax, BrasRobotNaive(depart_aleatoire=True, seed=3))
+        ax.text.assert_not_called()
+
+        ax.reset_mock()
+        graphes.marquer_cases(ax, Labyrinthe5x5())
+        self.assertEqual(ax.text.call_count, 1)
+        self.assertEqual(ax.text.call_args.args[2], "S")
+
+        figure = mock.Mock()
+        graphes.legende_cases(figure, BrasRobotNaive(depart_aleatoire=True),
+                             "jamais visité")
+        etiquettes_bras = [h.get_label()
+                           for h in figure.legend.call_args.kwargs["handles"]]
+        self.assertNotIn("départ", etiquettes_bras)
+
+        figure.reset_mock()
+        graphes.legende_cases(figure, Labyrinthe5x5(), "jamais visité")
+        etiquettes_labyrinthe = [h.get_label()
+                                for h in figure.legend.call_args.kwargs["handles"]]
+        self.assertIn("départ", etiquettes_labyrinthe)
+
     def test_meilleure_action_textes_bras_et_fleches_labyrinthe(self):
         """Les bras affichent theta1/theta2, le labyrinthe des flèches."""
         agent = agent_bras(nb_episodes=5)
@@ -92,6 +116,7 @@ class TestChemin(unittest.TestCase):
                           if len(appel.args) >= 4 and isinstance(appel.args[3], str)]
             self.assertTrue(any(e in ("theta1+", "theta1-", "theta2+", "theta2-")
                                 for e in etiquettes))
+            self.assertNotIn("S", etiquettes)
             self.assertEqual(fleche.call_count, 0)
 
         np.random.seed(0)
