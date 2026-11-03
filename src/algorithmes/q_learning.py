@@ -31,7 +31,12 @@ class QLearning:
         self.taux_exploration = []  # Part d'actions tirées au hasard dans chaque épisode.
 
         # Une ligne par état, une colonne par action.
-        self.Q = np.zeros((self.env.nb_etats, self.env.nb_actions), dtype=float)
+        # Petites valeurs initiales aléatoires (positives et négatives).
+        # L'initialisation suit la graine np.random.seed(...) utilisée par
+        # les expériences : les trois modes démarrent avec la même Q-table.
+        self.Q = np.random.uniform(
+            -0.1, 0.1, size=(self.env.nb_etats, self.env.nb_actions)
+        )
 
         # Compteurs cumulés : comme la table Q, ils survivent aux appels à apprendre().
         self.visites = np.zeros(self.env.nb_etats, dtype=int)
