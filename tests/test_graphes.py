@@ -3,6 +3,7 @@ import unittest
 from unittest import mock
 
 import numpy as np
+import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
@@ -36,6 +37,25 @@ class TestIndicateurs(unittest.TestCase):
                 self.assertEqual(agent.mises_a_jour.sum(), sum(agent.nombre_actions))
                 self.assertTrue((agent.explorations <= agent.mises_a_jour).all())
                 self.assertEqual(len(agent.epsilons), 40)
+
+    def test_cartes_comptage_echelle_lineaire(self):
+        """Les cartes de visites et de mises à jour n'utilisent pas LogNorm."""
+        environnements = [Labyrinthe5x5(),
+                          BrasRobotNaive(depart_aleatoire=True, seed=42)]
+        for env in environnements:
+            with self.subTest(env=type(env).__name__):
+                donnees = np.zeros(graphes.dimensions(env), dtype=int)
+                donnees[0, 0] = 2
+                donnees[1, 1] = 20
+                fig, ax = plt.subplots()
+                try:
+                    image = graphes.afficher_comptages(ax, donnees, env, 20)
+                    self.assertEqual(image.norm.vmin, 0)
+                    self.assertEqual(image.norm.vmax, 20)
+                    self.assertAlmostEqual(float(image.norm(10)), 0.5)
+                    self.assertTrue(np.ma.getmaskarray(image.get_array())[-1, -1])
+                finally:
+                    plt.close(fig)
 
     def test_compteurs_cumules_entre_deux_appels(self):
         agent = agent_bras()
