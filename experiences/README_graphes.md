@@ -14,6 +14,8 @@ Le programme entraîne le **labyrinthe 5×5** et les trois modes du bras
 - `experiences/resultats/bras_robotique/naive/`
 - `experiences/resultats/bras_robotique/smart/`
 - `experiences/resultats/bras_robotique/distance/`
+- `experiences/resultats/bras_robotique/comparaison_reussite_apprentissage.png`
+- `experiences/resultats/bras_robotique/comparaison_mouvements_finaux.png`
 
 Les anciens fichiers `1_convergence.png`, `2_epsilon_seeds.png`,
 `5_cartes_q.png`, `5b_carte_valeurs.png`, `7_carte_epsilon.png`,
@@ -27,10 +29,13 @@ lors de la prochaine génération : ils ne font plus partie de l'analyse.
 | `3_cartes_q_brutes.png` | Q(s,a) brute pour les quatre actions, du bleu clair (faible) au bleu foncé (élevée) |
 | `4_meilleure_action.png` | Meilleure action : flèches et chemin pour le labyrinthe, quatre couleurs pour les actions du bras (sans chemin superposé) |
 | `6_visites.png` | Nombre de passages par état |
+| `comparaison_reussite_apprentissage.png` | Trois courbes de taux de réussite, tous les 500 épisodes, sur les mêmes 30 départs |
+| `comparaison_mouvements_finaux.png` | Boxplots des mouvements pour les essais réussis après 5 000 épisodes, avec le nombre d'échecs de chaque mode |
 
-Les graphes 3, 4 et 6 sont créés pour chaque environnement. Le graphique de
-comparaison labyrinthe/bras a été retiré. Les indicateurs de synthèse restent
-affichés dans le terminal.
+Les graphes 3, 4 et 6 sont créés pour chaque environnement. Les deux nouveaux
+graphiques comparent **uniquement les trois récompenses du bras robotique**.
+Le graphique de comparaison labyrinthe/bras a été retiré. Les indicateurs
+de synthèse restent affichés dans le terminal.
 
 ## Comment interpréter les cartes ?
 
@@ -69,6 +74,30 @@ elles ne représentent ni une récompense ni la valeur de Q(s,a).
 pour rendre visibles les écarts de comptage entre les états peu et très
 fréquentés. Le gris indique un état jamais visité. Les visites
 comptent aussi l'état initial de chaque épisode.
+
+## Comparer les trois récompenses du bras
+
+**Progression du taux de réussite :** les bras sont entraînés 5 000 épisodes.
+Après chaque bloc de 500 épisodes, chacun est évalué **sans exploration**
+sur les **mêmes 30 états initiaux non terminaux**, choisis une seule fois
+avec une graine fixe (`42 + 10 000`). Chaque essai est limité à 50 mouvements.
+La courbe mesure le pourcentage de départs ayant atteint la cible.
+Les 10 points de chaque courbe correspondent aux épisodes 500, 1 000, ...
+5 000 ; ce ne sont **pas des moyennes glissantes**.
+
+**Nombre de mouvements final :** après les 5 000 épisodes, le diagramme en
+boîtes présente la distribution du nombre de mouvements **parmi les
+essais réussis**. Le panneau inférieur indique explicitement combien
+d'essais ont échoué (sur 30) : une politique qui ne réussit que les
+départs faciles ne doit pas être considérée comme meilleure en raison
+d'une faible médiane sur ses rares succès. Les losanges blancs indiquent
+la moyenne et les traits dans les boîtes la médiane. Quand un mode n'a
+aucune réussite, aucune boîte n'est dessinée.
+
+Les évaluations sont déterministes : aucune exploration, aucun tirage
+aléatoire, aucune mise à jour des Q-values ni des compteurs. Elles
+n'interrompent pas réellement la continuité de l'apprentissage :
+Q, epsilon et générateurs aléatoires sont conservés entre blocs.
 
 ## Limites d'interprétation
 
