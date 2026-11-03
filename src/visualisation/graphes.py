@@ -499,7 +499,7 @@ def indicateurs(algorithme, environnement):
 
 
 # ---------------------------------------------------------------------------
-# Comparaison des récompenses du bras : évolution et efficacité finale
+# Comparaison des récompenses du bras : progression de la réussite
 # ---------------------------------------------------------------------------
 def graphe_progression_reussite(suivis, fichier):
     """Compare le succès glouton à chaque point d'évaluation (mêmes départs)."""
@@ -524,63 +524,6 @@ def graphe_progression_reussite(suivis, fichier):
         f"Politique gloutonne, mêmes {bilans_reference[-1]['tests']} départs de test, "
         f"{bilans_reference[-1]['max_pas']} mouvements maximum par essai",
         fontsize=10, color=ENCRE_SECONDAIRE,
-    )
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
-
-
-def graphe_mouvements_finaux(suivis, fichier):
-    """Compare les mouvements sur les succès finaux, sans dissimuler les échecs."""
-    modes = list(suivis)
-    bilans = [suivis[mode][-1] for mode in modes]
-    positions = np.arange(1, len(modes) + 1)
-
-    fig, (ax, ax_echecs) = plt.subplots(
-        2, 1, figsize=(10, 8), sharex=True, layout="constrained",
-        gridspec_kw={"height_ratios": [3.3, 1]},
-    )
-    for i, bilan in enumerate(bilans):
-        mouvements = bilan["mouvements_reussis"]
-        if mouvements:
-            elements = ax.boxplot(
-                [mouvements], positions=[positions[i]], widths=0.45,
-                patch_artist=True, showmeans=True,
-                medianprops={"color": ENCRE, "linewidth": 2},
-                meanprops={"marker": "D", "markerfacecolor": "white",
-                           "markeredgecolor": ENCRE, "markersize": 5},
-            )
-            for boite in elements["boxes"]:
-                boite.set_facecolor(COULEURS[i % len(COULEURS)])
-                boite.set_alpha(0.75)
-        else:
-            ax.text(positions[i], 0.5, "Aucun succès",
-                    ha="center", va="center",
-                    transform=ax.get_xaxis_transform(), fontsize=10)
-        ax.text(positions[i], 0.97,
-                f"{bilan['reussites']}/{bilan['tests']} réussites",
-                ha="center", va="top",
-                transform=ax.get_xaxis_transform(), fontsize=9,
-                color=ENCRE_SECONDAIRE)
-
-    ax.set_ylabel("Nombre de mouvements (succès uniquement)")
-    ax.set_ylim(bottom=0)
-    ax.grid(axis="y", alpha=0.2)
-    ax.set_title("Nombre de mouvements après entraînement (boîtes : essais réussis)")
-
-    couleurs = [COULEURS[i % len(COULEURS)] for i in range(len(modes))]
-    barres = ax_echecs.bar(positions, [bilan["echecs"] for bilan in bilans],
-                           color=couleurs, alpha=0.8, width=0.45)
-    ax_echecs.bar_label(barres, padding=3)
-    ax_echecs.set_ylabel("Échecs")
-    ax_echecs.set_ylim(0, max(bilan["tests"] for bilan in bilans) * 1.12 + 1)
-    ax_echecs.set_xticks(positions, [mode.capitalize() for mode in modes])
-    ax_echecs.set_xlabel("Fonction de récompense")
-    ax_echecs.grid(axis="y", alpha=0.15)
-    fig.suptitle(
-        f"Politiques gloutonnes après {bilans[0]['episode']} épisodes ; "
-        f"{bilans[0]['tests']} départs identiques, "
-        f"{bilans[0]['max_pas']} mouvements maximum",
-        fontsize=11,
     )
     fig.savefig(fichier, dpi=150)
     plt.close(fig)
