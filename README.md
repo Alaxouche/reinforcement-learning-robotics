@@ -165,9 +165,8 @@ bleue). Pour les labyrinthes, en plus : écart à la politique optimale depuis
 chaque case (7), et une **comparaison 5 x 5 / 36 x 36**
 (`labyrinthes/comparaison_5x5_36x36.png`).
 
-**Trois comparaisons des récompenses du bras** :
+**Deux graphiques des récompenses du bras** :
 - taux de réussite de la politique tous les 500 épisodes (mêmes 30 départs) ;
-- nombre de mouvements sur les réussites finales, avec les échecs séparés ;
 - longueur des épisodes pendant l'entraînement (moyenne glissante).
 
 Le graphique de comparaison labyrinthe/bras a été retiré.
