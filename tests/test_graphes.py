@@ -213,8 +213,8 @@ class TestChemin(unittest.TestCase):
         np.testing.assert_array_equal(np_alea[1], etat_apres[1])
         self.assertEqual(np_alea[2:], etat_apres[2:])
 
-    def test_nouveaux_graphes_avec_et_sans_reussites(self):
-        """Les figures se construisent même quand un mode ne réussit jamais."""
+    def test_graphe_reussite_avec_et_sans_reussites(self):
+        """La progression se trace même quand un mode ne réussit jamais."""
         def bilan(episode, pas, tests=5):
             return dict(episode=episode, tests=tests, max_pas=12,
                         reussites=len(pas), echecs=tests - len(pas),
@@ -228,8 +228,7 @@ class TestChemin(unittest.TestCase):
         }
         with mock.patch.object(Figure, "savefig") as enregistrer:
             graphes.graphe_progression_reussite(suivis, "progression.png")
-            graphes.graphe_mouvements_finaux(suivis, "mouvements.png")
-        self.assertEqual(enregistrer.call_count, 2)
+        self.assertEqual(enregistrer.call_count, 1)
 
     def test_depart_s_uniquement_pour_labyrinthe(self):
         """Les cartes du bras n'indiquent aucun départ fixe."""
