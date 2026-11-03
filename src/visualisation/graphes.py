@@ -429,7 +429,7 @@ def graphe_progression_reussite(suivis, fichier):
     ax.set_title("Bras robotique : vitesse d'apprentissage des trois récompenses")
     fig.suptitle(
         f"Politique gloutonne, mêmes {bilans_reference[-1]['tests']} départs de test, "
-        "50 mouvements maximum par essai",
+        f"{bilans_reference[-1]['max_pas']} mouvements maximum par essai",
         fontsize=10, color=ENCRE_SECONDAIRE,
     )
     fig.savefig(fichier, dpi=150)
@@ -480,7 +480,8 @@ def graphe_mouvements_finaux(suivis, fichier):
     ax_echecs.grid(axis="y", alpha=0.15)
     fig.suptitle(
         f"Politiques gloutonnes après {bilans[0]['episode']} épisodes ; "
-        f"{bilans[0]['tests']} départs identiques, 50 mouvements maximum",
+        f"{bilans[0]['tests']} départs identiques, "
+        f"{bilans[0]['max_pas']} mouvements maximum",
         fontsize=11,
     )
     fig.savefig(fichier, dpi=150)
