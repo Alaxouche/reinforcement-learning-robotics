@@ -7,15 +7,17 @@ py -m pip install -r requirements.txt
 py -m experiences.graphes
 ```
 
-Le programme entraîne le **labyrinthe 5×5** et les trois modes du bras
+Le programme entraîne les **labyrinthes 5×5 et 36×36** et les trois modes du bras
 (**naive, smart, distance**) avec la graine `42`. Il enregistre des PNG dans :
 
-- `experiences/resultats/labyrinthes/`
+- `experiences/resultats/labyrinthes/5x5/` et `experiences/resultats/labyrinthes/36x36/`
+- `experiences/resultats/labyrinthes/comparaison_5x5_36x36.png`
 - `experiences/resultats/bras_robotique/naive/`
 - `experiences/resultats/bras_robotique/smart/`
 - `experiences/resultats/bras_robotique/distance/`
 - `experiences/resultats/bras_robotique/comparaison_reussite_apprentissage.png`
 - `experiences/resultats/bras_robotique/comparaison_mouvements_finaux.png`
+- `experiences/resultats/bras_robotique/comparaison_longueur_episodes.png`
 
 Les anciens fichiers `1_convergence.png`, `2_epsilon_seeds.png`,
 `5_cartes_q.png`, `5b_carte_valeurs.png`, `7_carte_epsilon.png`,
@@ -28,12 +30,24 @@ lors de la prochaine génération : ils ne font plus partie de l'analyse.
 |---|---|
 | `3_cartes_q_brutes.png` | Q(s,a) brute pour les quatre actions, du bleu clair (faible) au bleu foncé (élevée) |
 | `4_meilleure_action.png` | Meilleure action : flèches et chemin pour le labyrinthe, quatre couleurs pour les actions du bras (sans chemin superposé) |
-| `6_visites.png` | Nombre de passages par état |
+| `6_visites.png` | Couleur : passages par état. Dans chaque case : passages (haut) / mises à jour de Q (bas). L'écart vient du départ de chaque épisode (passage sans action préalable) et de l'arrivée (visitée, jamais mise à jour). Le 36×36 est une grande image à zoomer |
+| `6b_passages_par_action.png` | Une carte par action (haut/bas/gauche/droite ; pour le bras theta1±, theta2± sur la grille des couples (theta1, theta2)) : nombre de fois où l'action a été jouée depuis chaque case. Même palette bleue et même échelle log pour comparer les quatre cartes |
+| `7_ecart_optimal.png` | (labyrinthes) Si l'agent partait de chaque case et suivait sa politique apprise : bleu très clair = chemin optimal, bleu plus foncé = arrivée atteinte avec détour, orange pâle = la politique tourne en rond (case peu apprise). Le trait noir est le chemin appris depuis S. L'optimum est calculé exactement (Dijkstra sur les récompenses) |
+| `comparaison_5x5_36x36.png` | Longueur des épisodes / plus court chemin, % de cases menant à l'arrivée, % de cases avec chemin optimal, et chemin depuis S, en fonction de la progression de l'entraînement (%) |
+| `comparaison_longueur_episodes.png` | Bras : mouvements par épisode pendant l'entraînement (moyenne glissante sur 100), comparable entre récompenses |
 | `comparaison_reussite_apprentissage.png` | Trois courbes de taux de réussite, tous les 500 épisodes, sur les mêmes 30 départs |
 | `comparaison_mouvements_finaux.png` | Boxplots des mouvements pour les essais réussis après 5 000 épisodes, avec le nombre d'échecs de chaque mode |
 
-Les graphes 3, 4 et 6 sont créés pour chaque environnement. Les deux nouveaux
-graphiques comparent **uniquement les trois récompenses du bras robotique**.
+Les graphes 3, 4, 6 et 6b sont créés pour chaque environnement, le 7 pour les
+labyrinthes. Les graphiques `comparaison_*` du bras comparent
+**uniquement les trois récompenses du bras robotique**.
+
+**Pourquoi des cases orange dans `7_ecart_optimal.png` du 36×36 ?** L'agent
+commence toujours en S. Une fois epsilon faible, il ne parcourt presque plus
+que son trajet : les cases éloignées gardent des Q-values peu apprises et, en
+partant de là, la politique gloutonne peut boucler. Ce n'est pas une erreur
+de l'algorithme mais une limite de l'exploration depuis un départ unique ;
+des départs aléatoires corrigeraient ces zones.
 Le graphique de comparaison labyrinthe/bras a été retiré. Les indicateurs
 de synthèse restent affichés dans le terminal.
 

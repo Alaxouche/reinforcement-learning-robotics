@@ -29,6 +29,10 @@ class Labyrinthe(EnvironnementDiscret):
         self.depart = depart
         self.arrivee = arrivee
         self.murs = list(murs)
+        # Ensemble et cache : indispensables pour les grands labyrinthes (36 x 36),
+        # où une recherche dans une liste de murs à chaque pas devient coûteuse.
+        self._ensemble_murs = set(self.murs)
+        self._cache_actions = {}
 
         # 0=haut, 1=bas, 2=gauche, 3=droite.
         self.actions = [
@@ -54,7 +58,11 @@ class Labyrinthe(EnvironnementDiscret):
 
     def actions_possibles(self, etat):
         """Renvoie les actions autorisées depuis un état."""
-        if etat == self.arrivee or etat in self.murs:
+        if etat in self._cache_actions:
+            return list(self._cache_actions[etat])
+
+        if etat == self.arrivee or etat in self._ensemble_murs:
+            self._cache_actions[etat] = ()
             return []
 
         ligne, colonne = divmod(etat, self.taille)
@@ -68,9 +76,10 @@ class Labyrinthe(EnvironnementDiscret):
             if 0 <= nouvelle_ligne < self.taille and 0 <= nouvelle_colonne < self.taille:
                 suivant = nouvelle_ligne * self.taille + nouvelle_colonne
 
-                if suivant not in self.murs:
+                if suivant not in self._ensemble_murs:
                     possibles.append(action)
 
+        self._cache_actions[etat] = tuple(possibles)
         return possibles
 
     def etat_suivant(self, etat, action):

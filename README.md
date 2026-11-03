@@ -14,7 +14,8 @@ reinforcement-learning-robotics/
 │   │   ├── environnement_discret.py
 │   │   ├── labyrinthe/
 │   │   │   ├── labyrinthe.py
-│   │   │   └── labyrinthe_5x5.py
+│   │   │   ├── labyrinthe_5x5.py
+│   │   │   └── labyrinthe_36x36.py    # grille ouverte générée, 60 pièges
 │   │   └── bras_robotique/
 │   │       ├── bras_robotique_2d.py   # Mécanique commune
 │   │       ├── bras_robot_naive.py    # +10 / -0.02
@@ -52,7 +53,7 @@ EnvironnementDiscret
         ↑
     Labyrinthe
         ↑
-  Labyrinthe5x5
+  Labyrinthe5x5, Labyrinthe36x36
 ```
 
 `EnvironnementDiscret` définit le contrat commun : nombre d'états, nombre d'actions, `reset()`, `actions_possibles()` et `step()`.
@@ -93,6 +94,42 @@ Les actions sont :
 3 = Droite
 ```
 
+### Labyrinthe 36 x 36
+
+`Labyrinthe36x36` sert à comparer le Q-learning sur un problème beaucoup plus
+grand (1 296 états contre 25). La grille est **ouverte** : des segments de murs
+droits sont posés au hasard (≈ 15 % des cases, graine fixe `seed=0`, donc
+toujours le même labyrinthe) et 60 pièges sont dispersés. Il existe donc de
+très nombreux chemins viables : l'agent doit trouver celui qui maximise le
+retour (un piège coûte autant que 10 déplacements).
+
+```text
+départ : 0 (coin haut gauche)    arrivée : 1295 (coin bas droit)
+murs   : 197                     pièges  : 60
+plus court chemin : 70 déplacements (retour optimal -5.9, sans piège)
+récompenses : identiques au 5 x 5
+```
+
+Les hyperparamètres sont adaptés à la taille :
+
+| | 5 x 5 | 36 x 36 |
+|---|---|---|
+| alpha | 0.1 | 0.5 |
+| gamma | 0.9 | 0.99 |
+| décroissance d'epsilon | 0.99 | 0.998 |
+| épisodes | 1 000 | 3 000 |
+| pas max par épisode | 30 | 1 000 |
+
+Avec alpha = 0.1 le 36 x 36 n'apprenait pas de chemin vers l'arrivée en
+3 000 épisodes ; gamma = 0.99 donne un horizon compatible avec un trajet
+de 70 pas.
+
+Résultat (graine 42) : depuis le départ, l'agent suit un chemin optimal de
+70 déplacements dans les deux labyrinthes. Mais depuis une case quelconque, la
+politique du 36 x 36 n'est optimale que pour ≈ 65 % des cases (100 % dans
+le 5 x 5) : l'agent part toujours de S, et les zones éloignées de son trajet,
+peu visitées une fois epsilon faible, restent mal apprises.
+
 ## Q-learning
 
 `QLearning` reste une classe autonome et utilise un `EnvironnementDiscret`.
@@ -106,24 +143,32 @@ Q(s,a) <- Q(s,a) + alpha * (r + gamma * max_a' Q(s',a') - Q(s,a))
 Depuis la racine du projet :
 
 ```bash
-py -m experiences.entrainement
+py -m experiences.entrainement              # 5 x 5 puis 36 x 36, avec comparaison
+py -m experiences.entrainement --taille 36  # un seul labyrinthe
 ```
 
 ## Graphiques
 
 Les scripts d'entraînement affichent leurs résultats dans le terminal, sans produire
-d'image. Un seul programme entraîne le labyrinthe et les trois modes du bras,
-puis enregistre les graphiques PNG :
+d'image. Un seul programme entraîne les deux labyrinthes et les trois modes du
+bras, puis enregistre les graphiques PNG (≈ 2 minutes) :
 
 ```bash
 py -m pip install -r requirements.txt
 py -m experiences.graphes
 ```
 
-Les graphes conservés sont : Q-values brutes (3), meilleure action (4)
-et visites (6), plus **deux comparaisons des récompenses du bras** :
+Pour chaque environnement : Q-values brutes (3), meilleure action (4),
+visites (6, avec dans chaque case passages / mises à jour de Q) et
+passages par type de déplacement (6b, une carte par action, même échelle
+bleue). Pour les labyrinthes, en plus : écart à la politique optimale depuis
+chaque case (7), et une **comparaison 5 x 5 / 36 x 36**
+(`labyrinthes/comparaison_5x5_36x36.png`).
+
+**Trois comparaisons des récompenses du bras** :
 - taux de réussite de la politique tous les 500 épisodes (mêmes 30 départs) ;
-- nombre de mouvements sur les réussites finales, avec les échecs séparés.
+- nombre de mouvements sur les réussites finales, avec les échecs séparés ;
+- longueur des épisodes pendant l'entraînement (moyenne glissante).
 
 Le graphique de comparaison labyrinthe/bras a été retiré.
 Le graphe 4 affiche des **flèches et un chemin dans le labyrinthe**.

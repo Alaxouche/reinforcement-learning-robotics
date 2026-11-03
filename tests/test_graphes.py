@@ -27,7 +27,7 @@ def agent_bras(seed=42, nb_episodes=50):
 class TestIndicateurs(unittest.TestCase):
     def test_initialisation_aleatoire_reproductible_de_q(self):
         """Q est aléatoire, centrée sur zéro et reproductible par graine."""
-        config = experience.EXPERIENCES[1]
+        config = experience.EXPERIENCES_BRAS[0]
         premier, _ = experience.creer_agent(config, 42)
         second, _ = experience.creer_agent(config, 42)
         autre, _ = experience.creer_agent(config, 43)
@@ -42,7 +42,7 @@ class TestIndicateurs(unittest.TestCase):
         self.assertFalse((premier.Q == 0).all())
 
         # Pour comparer les récompenses, leur Q-table initiale est identique.
-        for config_mode in experience.EXPERIENCES[2:]:
+        for config_mode in experience.EXPERIENCES_BRAS[1:]:
             agent, _ = experience.creer_agent(config_mode, 42)
             np.testing.assert_array_equal(premier.Q, agent.Q)
 
@@ -145,7 +145,7 @@ class TestChemin(unittest.TestCase):
         self.assertTrue(np.array_equal(temoin.Q, controle.Q))
 
     def test_entrainement_graphes_identique_a_l_entrainement_complet(self):
-        config = dict(experience.EXPERIENCES[1], nb_episodes=100, max_pas=12)
+        config = dict(experience.EXPERIENCES_BRAS[0], nb_episodes=100, max_pas=12)
         par_script, _ = experience.entrainer(config, 42)
 
         np.random.seed(42)
@@ -160,7 +160,7 @@ class TestChemin(unittest.TestCase):
 
     def test_entrainement_fractionne_et_suivi_identiques_au_complet(self):
         """Évaluer à mi-parcours ne doit modifier ni Q, ni epsilon, ni l'aléatoire."""
-        config = dict(experience.EXPERIENCES[1], nb_episodes=100, max_pas=12)
+        config = dict(experience.EXPERIENCES_BRAS[0], nb_episodes=100, max_pas=12)
 
         temoin, env_temoin = experience.entrainer(config, 42)
         etat_aleatoire_temoin = np.random.get_state()
