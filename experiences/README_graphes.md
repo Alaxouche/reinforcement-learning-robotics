@@ -16,15 +16,14 @@ Le programme entraîne le **labyrinthe 5×5** et les trois modes du bras
 - `experiences/resultats/bras_robotique/distance/`
 - `experiences/resultats/comparaison_labyrinthe_bras.png`
 
-Les anciens fichiers `2_epsilon_seeds.png`, `5_cartes_q.png` et
-`5b_carte_valeurs.png` sont supprimés de ces dossiers lors de la prochaine
+Les anciens fichiers `1_convergence.png`, `2_epsilon_seeds.png`,
+`5_cartes_q.png` et `5b_carte_valeurs.png` sont supprimés lors de la prochaine
 génération : ils ne font plus partie de l'analyse.
 
 ## Graphiques conservés
 
 | Fichier | Interprétation |
 |---|---|
-| `1_convergence.png` | Récompense cumulée, nombre de pas et epsilon au fil des épisodes |
 | `3_cartes_q_brutes.png` | Q(s,a) non normalisée pour chacune des quatre actions |
 | `4_meilleure_action.png` | Politique gloutonne et chemin suivi : **flèches pour le labyrinthe**, **theta1+, theta1-, theta2+, theta2- pour le bras** |
 | `6_visites.png` | Nombre de passages par état |
@@ -33,7 +32,7 @@ génération : ils ne font plus partie de l'analyse.
 | `9_lien_epsilon_greedy.png` | Part d'exploration, exploitation et fréquence des mises à jour par action |
 | `comparaison_labyrinthe_bras.png` | Concentration des visites, mises à jour par couple et taux de réussite |
 
-Les graphes 1, 3, 4, 6, 7, 8 et 9 sont créés pour chaque environnement.
+Les graphes 3, 4, 6, 7, 8 et 9 sont créés pour chaque environnement.
 Le dernier est une comparaison globale.
 
 ## Comment interpréter les cartes ?
@@ -69,10 +68,9 @@ maximale. Les deux contributions sont comptabilisées séparément.
 
 ## Limites d'interprétation
 
-La courbe du graphe 1 ne prouve pas la convergence mathématique de
-toutes les Q-values. Les comparaisons reposent ici sur une seule
-graine (`42`) ; elles permettent de décrire une expérience, pas
-de conclure à la supériorité générale d'une récompense.
+Les comparaisons reposent ici sur une seule graine (`42`) ; elles
+permettent de décrire une expérience, mais ne prouvent pas la convergence
+mathématique des Q-values ni la supériorité générale d'une récompense.
 
 Les récompenses des modes naive, smart et distance ont des échelles
 différentes ; privilégier le taux de réussite et le nombre d'actions
