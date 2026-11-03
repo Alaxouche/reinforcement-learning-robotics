@@ -17,8 +17,9 @@ Le programme entraîne le **labyrinthe 5×5** et les trois modes du bras
 - `experiences/resultats/comparaison_labyrinthe_bras.png`
 
 Les anciens fichiers `1_convergence.png`, `2_epsilon_seeds.png`,
-`5_cartes_q.png`, `5b_carte_valeurs.png` et `7_carte_epsilon.png` sont supprimés lors de la prochaine
-génération : ils ne font plus partie de l'analyse.
+`5_cartes_q.png`, `5b_carte_valeurs.png`, `7_carte_epsilon.png`,
+`8_mises_a_jour.png` et `9_lien_epsilon_greedy.png` sont supprimés
+lors de la prochaine génération : ils ne font plus partie de l'analyse.
 
 ## Graphiques conservés
 
@@ -27,11 +28,9 @@ génération : ils ne font plus partie de l'analyse.
 | `3_cartes_q_brutes.png` | Q(s,a) non normalisée pour chacune des quatre actions |
 | `4_meilleure_action.png` | Politique gloutonne et chemin suivi : **flèches pour le labyrinthe**, **theta1+, theta1-, theta2+, theta2- pour le bras** |
 | `6_visites.png` | Nombre de passages par état |
-| `8_mises_a_jour.png` | Nombre de mises à jour de chaque couple état-action |
-| `9_lien_epsilon_greedy.png` | Part d'exploration, exploitation et fréquence des mises à jour par action |
 | `comparaison_labyrinthe_bras.png` | Concentration des visites, mises à jour par couple et taux de réussite |
 
-Les graphes 3, 4, 6, 8 et 9 sont créés pour chaque environnement.
+Les graphes 3, 4 et 6 sont créés pour chaque environnement.
 Le dernier est une comparaison globale.
 
 ## Comment interpréter les cartes ?
@@ -50,16 +49,10 @@ superposé est uniquement **un exemple** depuis la configuration
 `(90°, 0°)`, pas le parcours de tous les épisodes. Son trait est
 interrompu visuellement quand un angle passe de 350° à 0°.
 
-**Graphes 6 et 8 :** les couleurs utilisent une **échelle log**
+**Graphe 6 :** les couleurs utilisent une **échelle log**
 pour rendre visibles les écarts de comptage entre les états peu et très
-fréquentés. Le gris indique un état jamais visité ou une action jamais
-mise à jour. Une mise à jour de Q correspond à un mouvement de l'agent ;
-les visites comptent aussi l'état initial de chaque épisode.
-
-**Graphe 9 :** une action peut être sélectionnée soit par tirage
-aléatoire, soit par exploitation de la Q-table. Même pendant
-l'exploration, le tirage peut sélectionner l'action ayant la Q-value
-maximale. Les deux contributions sont comptabilisées séparément.
+fréquentés. Le gris indique un état jamais visité. Les visites
+comptent aussi l'état initial de chaque épisode.
 
 ## Limites d'interprétation
 
