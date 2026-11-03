@@ -137,6 +137,79 @@ class TestChemin(unittest.TestCase):
         self.assertTrue(np.array_equal(par_script.Q, complet.Q))
 
 
+    def test_entrainement_fractionne_et_suivi_identiques_au_complet(self):
+        """Évaluer à mi-parcours ne doit modifier ni Q, ni epsilon, ni l'aléatoire."""
+        config = dict(experience.EXPERIENCES[1], nb_episodes=100, max_pas=12)
+
+        temoin, env_temoin = experience.entrainer(config, 42)
+        etat_aleatoire_temoin = np.random.get_state()
+        rng_environnement_temoin = env_temoin._rng.getstate()
+
+        suivi, env_suivi, bilans = experience.entrainer_avec_suivi(
+            config, 42, pas_evaluation=25, nb_tests=5
+        )
+        self.assertEqual([b["episode"] for b in bilans], [25, 50, 75, 100])
+        self.assertTrue(all(b["tests"] == 5 for b in bilans))
+        self.assertTrue(all(b["reussites"] + b["echecs"] == 5 for b in bilans))
+        self.assertTrue(all(b["max_pas"] == 12 for b in bilans))
+        self.assertTrue(all(0 <= b["taux_reussite"] <= 100 for b in bilans))
+
+        np.testing.assert_array_equal(temoin.Q, suivi.Q)
+        np.testing.assert_array_equal(temoin.visites, suivi.visites)
+        np.testing.assert_array_equal(temoin.mises_a_jour, suivi.mises_a_jour)
+        np.testing.assert_array_equal(temoin.explorations, suivi.explorations)
+        np.testing.assert_array_equal(temoin.somme_epsilons, suivi.somme_epsilons)
+        self.assertEqual(temoin.epsilon, suivi.epsilon)
+        self.assertEqual(temoin.nb_episodes, suivi.nb_episodes)
+        self.assertEqual(temoin.recompenses, suivi.recompenses)
+        self.assertEqual(temoin.nombre_actions, suivi.nombre_actions)
+        self.assertEqual(temoin.epsilons, suivi.epsilons)
+        self.assertEqual(temoin.taux_exploration, suivi.taux_exploration)
+        self.assertEqual(env_temoin.etat, env_suivi.etat)
+        self.assertEqual(rng_environnement_temoin, env_suivi._rng.getstate())
+        etat_aleatoire_suivi = np.random.get_state()
+        self.assertEqual(etat_aleatoire_temoin[0], etat_aleatoire_suivi[0])
+        np.testing.assert_array_equal(etat_aleatoire_temoin[1], etat_aleatoire_suivi[1])
+        self.assertEqual(etat_aleatoire_temoin[2:], etat_aleatoire_suivi[2:])
+
+    def test_evaluation_sans_modification_agent(self):
+        agent = agent_bras(nb_episodes=5)
+        agent.apprendre()
+        avant = agent.Q.copy()
+        compteurs = agent.visites.copy()
+        etat = agent.env.etat
+        np_alea = np.random.get_state()
+        rng_env = agent.env._rng.getstate()
+
+        bilan = experience.evaluer_politique(agent, agent.env.etats_depart[:4])
+        self.assertEqual(bilan["tests"], 4)
+        self.assertEqual(bilan["reussites"] + bilan["echecs"], 4)
+        np.testing.assert_array_equal(agent.Q, avant)
+        np.testing.assert_array_equal(agent.visites, compteurs)
+        self.assertEqual(agent.env.etat, etat)
+        self.assertEqual(agent.env._rng.getstate(), rng_env)
+        etat_apres = np.random.get_state()
+        np.testing.assert_array_equal(np_alea[1], etat_apres[1])
+        self.assertEqual(np_alea[2:], etat_apres[2:])
+
+    def test_nouveaux_graphes_avec_et_sans_reussites(self):
+        """Les figures se construisent même quand un mode ne réussit jamais."""
+        def bilan(episode, pas, tests=5):
+            return dict(episode=episode, tests=tests, max_pas=12,
+                        reussites=len(pas), echecs=tests - len(pas),
+                        taux_reussite=100 * len(pas) / tests,
+                        mouvements_reussis=pas)
+
+        suivis = {
+            "naive": [bilan(50, []), bilan(100, [])],
+            "smart": [bilan(50, [8]), bilan(100, [4, 6, 7])],
+            "distance": [bilan(50, [11]), bilan(100, [4, 9])],
+        }
+        with mock.patch.object(Figure, "savefig") as enregistrer:
+            graphes.graphe_progression_reussite(suivis, "progression.png")
+            graphes.graphe_mouvements_finaux(suivis, "mouvements.png")
+        self.assertEqual(enregistrer.call_count, 2)
+
     def test_depart_s_uniquement_pour_labyrinthe(self):
         """Les cartes du bras n'indiquent aucun départ fixe."""
         ax = mock.Mock()
