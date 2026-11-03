@@ -120,8 +120,8 @@ py -m pip install -r requirements.txt
 py -m experiences.graphes
 ```
 
-Les graphes conservés sont : Q-values brutes (3), meilleure action (4),
-visites (6), ainsi qu'une comparaison globale.
+Les graphes conservés sont : Q-values brutes (3), meilleure action (4)
+et visites (6). Le graphique de comparaison labyrinthe/bras a été retiré.
 Le graphe 4 affiche des **flèches et un chemin dans le labyrinthe**.
 Pour le bras, il présente **quatre couleurs selon l'action préférée**
 (theta1+, theta1-, theta2+, theta2-), sans texte ni chemin superposé ;
