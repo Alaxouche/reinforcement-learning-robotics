@@ -11,7 +11,7 @@ import matplotlib
 matplotlib.use("Agg")  # écrit des images sans ouvrir de fenêtre
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap, LogNorm
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch, Rectangle
 
@@ -219,9 +219,9 @@ def taille_carte(environnement):
 
 
 def afficher_comptages(ax, comptages, environnement, maxi):
-    """Carte de comptages en échelle log : quelques cases concentrent presque tout."""
+    """Carte de comptages avec une échelle de couleur linéaire de 0 au maximum."""
     image = ax.imshow(np.where(comptages > 0, comptages, np.nan), cmap=BLEUS,
-                      norm=LogNorm(vmin=1, vmax=maxi))
+                      vmin=0, vmax=max(1, maxi))
     preparer_grille(ax, environnement)
     marquer_cases(ax, environnement)
 
@@ -331,7 +331,7 @@ def graphe_visites(algorithme, environnement, nom, fichier):
     fig, ax = plt.subplots(figsize=taille_carte(environnement), layout="constrained")
     image = afficher_comptages(ax, visites, environnement, visites.max())
 
-    fig.colorbar(image, ax=ax, shrink=0.8, format="%d", label="passages (échelle log)")
+    fig.colorbar(image, ax=ax, shrink=0.8, format="%d", label="passages (échelle linéaire)")
     ax.set_title(f"{nom} : nombre de passages par état\n"
                  f"{int(visites.sum())} passages, "
                  f"{np.count_nonzero(visites)} états visités sur {visites.size}")
@@ -408,7 +408,7 @@ def graphe_mises_a_jour(algorithme, environnement, nom, fichier):
                      f"({100 * comptages.sum() / total:.1f} %)")
 
     fig.colorbar(image, ax=axes, shrink=0.8, format="%d",
-                 label="mises à jour de Q(s, a) (échelle log)")
+                 label="mises à jour de Q(s, a) (échelle linéaire)")
     fig.suptitle(f"{nom} : nombre de mises à jour par action ({total} au total)")
     legende_cases(fig, environnement, "action impossible ou jamais mise à jour")
     fig.savefig(fichier, dpi=150)
