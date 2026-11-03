@@ -11,15 +11,16 @@ import matplotlib
 matplotlib.use("Agg")  # écrit des images sans ouvrir de fenêtre
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap, LogNorm
+from matplotlib.colors import BoundaryNorm, LinearSegmentedColormap, ListedColormap, LogNorm
 from matplotlib.lines import Line2D
-from matplotlib.patches import Patch, Rectangle
+from matplotlib.patches import Circle, Patch, Rectangle
 
 
 # Flèche de chaque action (dx, dy) : 0=haut, 1=bas, 2=gauche, 3=droite.
 # L'axe vertical est inversé (ligne 0 en haut), donc "haut" correspond à dy négatif.
 FLECHES_LABYRINTHE = [(0, -0.3), (0, 0.3), (-0.3, 0), (0.3, 0)]
 COULEURS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]  # une couleur par série
+COULEURS_ACTIONS_BRAS = ["#3b82f6", "#f97316", "#22c55e", "#a855f7"]
 ENCRE = "#0b0b0b"
 ENCRE_SECONDAIRE = "#52514e"
 GRILLE = "#e1e0d9"
@@ -278,34 +279,65 @@ def graphe_cartes_q_brutes(algorithme, environnement, nom, fichier):
 # ---------------------------------------------------------------------------
 def graphe_meilleure_action(algorithme, environnement, nom, fichier):
     colonnes = dimensions(environnement)[1]
+
+    if est_bras(environnement):
+        # Carte catégorielle : chaque couleur représente une action, pas une Q-value.
+        # Aucun départ unique et aucun chemin de référence pour les bras.
+        carte = np.full(dimensions(environnement), np.nan)
+        for etat in range(environnement.nb_etats):
+            if algorithme.visites[etat] == 0 or not environnement.actions_possibles(etat):
+                continue
+            ligne, colonne = divmod(etat, colonnes)
+            carte[ligne, colonne] = algorithme.meilleure_action(etat)
+
+        couleurs = ListedColormap(COULEURS_ACTIONS_BRAS).with_extremes(bad=SANS_DONNEE)
+        normalisation = BoundaryNorm(np.arange(-0.5, 4.5, 1), couleurs.N)
+
+        fig, ax = plt.subplots(figsize=(11, 10), layout="constrained")
+        ax.imshow(carte, cmap=couleurs, norm=normalisation, interpolation="nearest")
+        preparer_grille(ax, environnement)
+
+        # Les configurations d'arrivée restent visibles sur toutes les couleurs.
+        for etat in arrivees(environnement):
+            ligne, colonne = divmod(etat, colonnes)
+            ax.add_patch(Circle((colonne, ligne), radius=0.35, fill=False,
+                                edgecolor=ENCRE, linewidth=4, zorder=5))
+            ax.add_patch(Circle((colonne, ligne), radius=0.35, fill=False,
+                                edgecolor="white", linewidth=2.2, zorder=6))
+
+        legendes = [
+            Patch(facecolor=couleur, label=nom_action.replace(" ", ""))
+            for couleur, nom_action in zip(COULEURS_ACTIONS_BRAS, environnement.noms_actions)
+        ]
+        legendes.append(Patch(facecolor=SANS_DONNEE,
+                              label="jamais visité / action impossible"))
+        legendes.append(Line2D([], [], linestyle="none", marker="o", markersize=9,
+                               markerfacecolor="none", markeredgecolor=ENCRE,
+                               markeredgewidth=2, label="arrivée"))
+        fig.legend(handles=legendes, loc="outside lower center", ncols=3)
+        ax.set_title(f"{nom} : meilleure action par configuration angulaire")
+        fig.savefig(fichier, dpi=150)
+        plt.close(fig)
+        return
+
+    # Dans le labyrinthe, on conserve les flèches et le chemin glouton.
     chemin, retour, atteint = chemin_glouton(algorithme, environnement)
-    # Une grille 36 x 36 avec des noms d'actions demande davantage de place.
-    taille = (14, 13) if est_bras(environnement) else taille_carte(environnement)
-    fig, ax = plt.subplots(figsize=taille, layout="constrained")
+    fig, ax = plt.subplots(figsize=taille_carte(environnement), layout="constrained")
     preparer_grille(ax, environnement)
 
-    # Une flèche par état : la meilleure action. Un état jamais visité n'a rien appris.
     for etat in range(environnement.nb_etats):
         if algorithme.visites[etat] == 0:
             colorier_case(ax, etat, colonnes, GRILLE)
         elif environnement.actions_possibles(etat):
             ligne, colonne = divmod(etat, colonnes)
             action = algorithme.meilleure_action(etat)
-            if est_bras(environnement):
-                # Au lieu de 1 296 flèches, écrire la rotation optimale par case.
-                etiquette = environnement.noms_actions[action].replace(" ", "")
-                ax.text(colonne, ligne, etiquette, ha="center", va="center",
-                        fontsize=4.5, fontweight="bold", color=ENCRE, zorder=4)
-            else:
-                dx, dy = FLECHES_LABYRINTHE[action]
-                ax.arrow(colonne - dx, ligne - dy, 2 * dx, 2 * dy,
-                         head_width=0.15, length_includes_head=True,
-                         color=ENCRE, linewidth=0.5)
+            dx, dy = FLECHES_LABYRINTHE[action]
+            ax.arrow(colonne - dx, ligne - dy, 2 * dx, 2 * dy,
+                     head_width=0.15, length_includes_head=True,
+                     color=ENCRE, linewidth=0.5)
 
     marquer_cases(ax, environnement)
 
-    # Chemin glouton : on relie les centres des cases visitées. Sur le bras, un angle
-    # repasse de 350 à 0 degrés : on coupe le trait au lieu de traverser la grille.
     x, y = [], []
     for precedent, etat in zip(chemin[:1] + chemin, chemin):
         ligne_avant, colonne_avant = divmod(precedent, colonnes)
@@ -315,13 +347,12 @@ def graphe_meilleure_action(algorithme, environnement, nom, fichier):
             y.append(np.nan)
         x.append(colonne)
         y.append(ligne)
-    # Le chemin doit rester visible sans masquer les noms d'actions.
+
     ax.plot(x, y, color=COULEURS[1], linewidth=8, alpha=0.35,
             solid_capstyle="round", zorder=2)
 
     statut = "objectif atteint" if atteint else "objectif non atteint"
-    exemple = (" (exemple depuis theta1=90°, theta2=0°)" if est_bras(environnement) else "")
-    ax.set_title(f"{nom} : meilleure action argmax Q(s, a) et chemin glouton{exemple}\n"
+    ax.set_title(f"{nom} : meilleure action argmax Q(s, a) et chemin glouton\\n"
                  f"{len(chemin) - 1} déplacements, retour {retour:.2f}, {statut}")
     legende_cases(fig, environnement, "état jamais visité")
     fig.savefig(fichier, dpi=150)
