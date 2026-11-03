@@ -179,7 +179,7 @@ def entourer_case(ax, etat, colonnes, couleur):
 
 
 def marquer_cases(ax, environnement):
-    """Murs, pièges, arrivée et départ, communs à toutes les cartes."""
+    """Marque les arrivées et les obstacles ; S uniquement dans le labyrinthe."""
     colonnes = dimensions(environnement)[1]
     for etat in getattr(environnement, "murs", []):
         colorier_case(ax, etat, colonnes, MUR)
@@ -188,19 +188,20 @@ def marquer_cases(ax, environnement):
     for etat in arrivees(environnement):
         entourer_case(ax, etat, colonnes, ARRIVEE)
 
-    # Dans le labyrinthe, le centre de la case est réservé à sa valeur.
-    decalage = 0 if est_bras(environnement) else 0.32
-    ligne, colonne = divmod(depart(environnement), colonnes)
-    ax.text(colonne - decalage, ligne - decalage, "S", ha="center", va="center",
-            fontsize=8, fontweight="bold", zorder=5,
-            bbox=dict(boxstyle="round,pad=0.1", facecolor=FOND, edgecolor="none"))
+    # Le bras commence chaque épisode à une pose différente : pas de S unique.
+    if not est_bras(environnement):
+        ligne, colonne = divmod(depart(environnement), colonnes)
+        ax.text(colonne - 0.32, ligne - 0.32, "S", ha="center", va="center",
+                fontsize=8, fontweight="bold", zorder=5,
+                bbox=dict(boxstyle="round,pad=0.1", facecolor=FOND, edgecolor="none"))
 
 
 def legende_cases(fig, environnement, gris, couleur_gris=GRILLE):
     """Légende sous la figure. `gris` : ce que signifie une case grise."""
-    elements = [Line2D([], [], linestyle="none", marker="$S$", color=ENCRE,
-                       label="départ de référence" if est_bras(environnement) else "départ"),
-                Patch(color=couleur_gris, label=gris)]
+    elements = [Patch(color=couleur_gris, label=gris)]
+    if not est_bras(environnement):
+        elements.insert(0, Line2D([], [], linestyle="none", marker="$S$",
+                                  color=ENCRE, label="départ"))
     if getattr(environnement, "murs", []):
         elements.append(Patch(color=MUR, label="mur"))
     if cases_dangereuses(environnement):
@@ -313,7 +314,8 @@ def graphe_meilleure_action(algorithme, environnement, nom, fichier):
             solid_capstyle="round", zorder=2)
 
     statut = "objectif atteint" if atteint else "objectif non atteint"
-    ax.set_title(f"{nom} : meilleure action argmax Q(s, a) et chemin glouton\n"
+    exemple = (" (exemple depuis theta1=90°, theta2=0°)" if est_bras(environnement) else "")
+    ax.set_title(f"{nom} : meilleure action argmax Q(s, a) et chemin glouton{exemple}\n"
                  f"{len(chemin) - 1} déplacements, retour {retour:.2f}, {statut}")
     legende_cases(fig, environnement, "état jamais visité")
     fig.savefig(fichier, dpi=150)
