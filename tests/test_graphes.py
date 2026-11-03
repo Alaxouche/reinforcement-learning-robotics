@@ -161,20 +161,56 @@ class TestChemin(unittest.TestCase):
                                 for h in figure.legend.call_args.kwargs["handles"]]
         self.assertIn("départ", etiquettes_labyrinthe)
 
-    def test_meilleure_action_textes_bras_et_fleches_labyrinthe(self):
-        """Les bras affichent theta1/theta2, le labyrinthe des flèches."""
+    def test_meilleure_action_couleurs_bras_et_fleches_labyrinthe(self):
+        """Bras : quatre couleurs catégorielles, sans textes ni chemin.
+        Labyrinthe : flèches et chemin conservés.
+        """
         agent = agent_bras(nb_episodes=5)
         agent.apprendre()
-        with (mock.patch.object(Axes, "text", autospec=True) as texte,
-              mock.patch.object(Axes, "arrow", autospec=True) as fleche,
-              mock.patch.object(Figure, "savefig")):
+        with (mock.patch.object(Axes, "imshow", autospec=True) as images,
+              mock.patch.object(Axes, "text", autospec=True) as textes,
+              mock.patch.object(Axes, "arrow", autospec=True) as fleches,
+              mock.patch.object(Axes, "plot", autospec=True) as chemins,
+              mock.patch.object(Axes, "add_patch", autospec=True) as patches,
+              mock.patch.object(Figure, "legend", autospec=True) as legendes,
+              mock.patch.object(Figure, "savefig"),
+              mock.patch.object(graphes, "chemin_glouton",
+                                side_effect=AssertionError("Pas de chemin pour le bras"))):
             graphes.graphe_meilleure_action(agent, agent.env, "Bras", "inutilise.png")
-            etiquettes = [appel.args[3] for appel in texte.call_args_list
-                          if len(appel.args) >= 4 and isinstance(appel.args[3], str)]
-            self.assertTrue(any(e in ("theta1+", "theta1-", "theta2+", "theta2-")
-                                for e in etiquettes))
-            self.assertNotIn("S", etiquettes)
-            self.assertEqual(fleche.call_count, 0)
+
+            self.assertEqual(images.call_count, 1)
+            carte = np.asarray(images.call_args.args[1])
+            self.assertEqual(carte.shape, (36, 36))
+            self.assertTrue(np.isin(carte[np.isfinite(carte)], [0, 1, 2, 3]).all())
+
+            couleurs = images.call_args.kwargs["cmap"]
+            self.assertEqual(couleurs.N, 4)
+            self.assertEqual(len(couleurs.colors), 4)
+            self.assertEqual(list(images.call_args.kwargs["norm"].boundaries),
+                             [-0.5, 0.5, 1.5, 2.5, 3.5])
+            self.assertTrue(np.allclose(couleurs.get_bad(),
+                                        to_rgba(graphes.SANS_DONNEE)))
+
+            for arrivee in agent.env.etats_objectif:
+                self.assertTrue(np.isnan(carte.flat[arrivee]))
+            for etat in range(agent.env.nb_etats):
+                if agent.visites[etat] > 0 and agent.env.actions_possibles(etat):
+                    self.assertEqual(carte.flat[etat], agent.meilleure_action(etat))
+                else:
+                    self.assertTrue(np.isnan(carte.flat[etat]))
+
+            textes.assert_not_called()
+            fleches.assert_not_called()
+            chemins.assert_not_called()
+            self.assertEqual(patches.call_count, 2 * len(agent.env.etats_objectif))
+            self.assertTrue(all(isinstance(c.args[1], graphes.Circle)
+                                for c in patches.call_args_list))
+            self.assertEqual(legendes.call_count, 1)
+            noms_legende = [h.get_label()
+                           for h in legendes.call_args.kwargs["handles"]]
+            self.assertEqual(noms_legende[:4],
+                             ["theta1+", "theta1-", "theta2+", "theta2-"])
+            self.assertIn("arrivée", noms_legende)
 
         np.random.seed(0)
         env = Labyrinthe5x5()
@@ -182,14 +218,16 @@ class TestChemin(unittest.TestCase):
                                     epsilon=1.0, epsilon_min=0.05, decroissance=0.99,
                                     nb_episodes=10, max_pas=15)
         agent_labyrinthe.apprendre()
-        with (mock.patch.object(Axes, "text", autospec=True) as texte,
-              mock.patch.object(Axes, "arrow", autospec=True) as fleche,
+        with (mock.patch.object(Axes, "text", autospec=True) as textes,
+              mock.patch.object(Axes, "arrow", autospec=True) as fleches,
+              mock.patch.object(Axes, "plot", autospec=True) as chemins,
               mock.patch.object(Figure, "savefig")):
             graphes.graphe_meilleure_action(agent_labyrinthe, env,
                                             "Labyrinthe", "inutilise.png")
-            self.assertGreater(fleche.call_count, 0)
+            self.assertGreater(fleches.call_count, 0)
+            self.assertGreater(chemins.call_count, 0)
             self.assertFalse(any("theta" in str(appel)
-                                 for appel in texte.call_args_list))
+                                 for appel in textes.call_args_list))
 
 
 if __name__ == "__main__":
