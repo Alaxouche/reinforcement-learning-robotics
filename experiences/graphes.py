@@ -5,8 +5,7 @@
     6_visites.png                nombre de passages par état
 
 Les images sont écrites dans experiences/resultats/labyrinthes/ et
-experiences/resultats/bras_robotique/<mode>/ (naive, smart, distance), et la
-comparaison dans experiences/resultats/comparaison_labyrinthe_bras.png.
+experiences/resultats/bras_robotique/<mode>/ (naive, smart, distance).
 Lancement depuis la racine du projet : py -m experiences.graphes
 """
 
@@ -82,6 +81,8 @@ def afficher_comparaison(agents):
 
 def main():
     agents = []
+    # Le graphique de comparaison labyrinthe / bras est retiré.
+    (DOSSIER_RESULTATS / "comparaison_labyrinthe_bras.png").unlink(missing_ok=True)
 
     for config in EXPERIENCES:
         nom = config["nom"]
@@ -106,7 +107,6 @@ def main():
 
         print(f"    graphes écrits dans {dossier}")
 
-    graphes.graphe_comparaison(agents, DOSSIER_RESULTATS / "comparaison_labyrinthe_bras.png")
     afficher_comparaison(agents)
 
 
