@@ -25,7 +25,7 @@ lors de la prochaine génération : ils ne font plus partie de l'analyse.
 
 | Fichier | Interprétation |
 |---|---|
-| `3_cartes_q_brutes.png` | Q(s,a) non normalisée pour chacune des quatre actions |
+| `3_cartes_q_brutes.png` | Q(s,a) brute pour les quatre actions, du bleu clair (faible) au bleu foncé (élevée) |
 | `4_meilleure_action.png` | Politique gloutonne et chemin suivi : **flèches pour le labyrinthe**, **theta1+, theta1-, theta2+, theta2- pour le bras** |
 | `6_visites.png` | Nombre de passages par état |
 | `comparaison_labyrinthe_bras.png` | Concentration des visites, mises à jour par couple et taux de réussite |
@@ -38,6 +38,14 @@ Le dernier est une comparaison globale.
 **Bras 36 × 36 :** les lignes correspondent aux 36 valeurs de `theta1`
 et les colonnes aux 36 valeurs de `theta2`. Une case représente une
 configuration angulaire, pas une position cartésienne de l'extrémité.
+
+**Graphe 3 :** les Q-values conservent leur signe et leur valeur
+numérique. Les quatre actions d'un même environnement partagent la même
+échelle de bleu, du minimum observé au maximum observé : plus foncé
+signifie Q-value plus élevée, **pas forcément positive**. Le gris représente
+une action impossible ou jamais essayée. Les échelles peuvent différer
+entre les modes naive, smart et distance ; il ne faut donc pas comparer
+leurs teintes directement.
 
 **Graphe 4 :** dans le labyrinthe, le départ unique est noté `S`
 et les flèches montrent la meilleure action (haut, bas, gauche, droite).
