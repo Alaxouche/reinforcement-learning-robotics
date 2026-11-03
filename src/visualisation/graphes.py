@@ -33,9 +33,6 @@ SANS_DONNEE = "#c3c2b7"  # gris plus soutenu, le zéro de ROUGE_BLEU étant déj
 BLEUS = LinearSegmentedColormap.from_list(
     "bleus", ["#cde2fb", "#6da7ec", "#2a78d6", "#1c5cab", "#0d366b"]
 ).with_extremes(bad=GRILLE)
-ORANGES = LinearSegmentedColormap.from_list(
-    "oranges", ["#fbe3d8", "#f4a988", "#eb6834", "#b8481c", "#7a2c0e"]
-).with_extremes(bad=GRILLE)
 # Signe : rouge = valeur négative, gris clair = zéro, bleu = valeur positive.
 ROUGE_BLEU = LinearSegmentedColormap.from_list(
     "rouge_bleu", ["#a32b2a", "#e34948", "#f0efec", "#2a78d6", "#104281"]
@@ -335,56 +332,6 @@ def graphe_visites(algorithme, environnement, nom, fichier):
     ax.set_title(f"{nom} : nombre de passages par état\n"
                  f"{int(visites.sum())} passages, "
                  f"{np.count_nonzero(visites)} états visités sur {visites.size}")
-    legende_cases(fig, environnement, "jamais visité")
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
-
-
-# ---------------------------------------------------------------------------
-# Graphe 7 : epsilon moyen de chaque état, en fonction de sa Q-value
-# ---------------------------------------------------------------------------
-def graphe_carte_epsilon(algorithme, environnement, nom, fichier):
-    """Epsilon ne dépend que de l'épisode : la carte montre à quelle époque de
-    l'entraînement chaque état a été visité, donc sous quel niveau d'exploration.
-    """
-    visites = algorithme.visites
-    epsilon_moyen = np.full(environnement.nb_etats, np.nan)
-    visitees = visites > 0
-    epsilon_moyen[visitees] = algorithme.somme_epsilons[visitees] / visites[visitees]
-    epsilon_moyen = en_grille(epsilon_moyen, environnement)
-    valeurs = grille_valeurs(algorithme, environnement)
-
-    fig, (ax_gauche, ax_droite) = plt.subplots(1, 2, figsize=(14, 6.5), layout="constrained")
-
-    image = ax_gauche.imshow(epsilon_moyen, cmap=ORANGES, vmin=algorithme.epsilon_min,
-                             vmax=max(algorithme.epsilons))
-    preparer_grille(ax_gauche, environnement)
-    marquer_cases(ax_gauche, environnement)
-    fig.colorbar(image, ax=ax_gauche, shrink=0.8, label="epsilon moyen lors des passages")
-    ax_gauche.set_title("Carte d'epsilon : clair = visité tard, foncé = visité tôt")
-
-    if not est_bras(environnement):
-        for (ligne, colonne), v in np.ndenumerate(epsilon_moyen):
-            if np.isfinite(v):
-                ecrire_valeur(ax_gauche, ligne, colonne, f"{v:.2f}", image.norm(v))
-
-    # À droite : un point par état. Epsilon moyen de tout l'entraînement en pointillés.
-    sur_chemin = np.zeros(environnement.nb_etats)
-    sur_chemin[chemin_glouton(algorithme, environnement)[0]] = 1
-    sur_chemin = en_grille(sur_chemin, environnement) > 0
-    valides = np.isfinite(valeurs)
-    for masque, couleur, label in ((~sur_chemin, COULEURS[1], "hors du chemin glouton"),
-                                   (sur_chemin, COULEURS[0], "sur le chemin glouton")):
-        ax_droite.scatter(valeurs[masque & valides], epsilon_moyen[masque & valides], s=36,
-                          alpha=0.7, color=couleur, linewidths=0, label=label)
-    ax_droite.axhline(np.mean(algorithme.epsilons), color=ENCRE_SECONDAIRE, linestyle="--",
-                      linewidth=1, label="epsilon moyen de l'entraînement")
-    ax_droite.set_xlabel("V(s) = max Q(s, a) en fin d'entraînement")
-    ax_droite.set_ylabel("epsilon moyen lors des passages")
-    ax_droite.set_title("Epsilon en fonction de la Q-value (un point par état)")
-    ax_droite.legend()
-
-    fig.suptitle(f"{nom} : epsilon vu par chaque état")
     legende_cases(fig, environnement, "jamais visité")
     fig.savefig(fichier, dpi=150)
     plt.close(fig)
