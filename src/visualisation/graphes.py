@@ -463,6 +463,11 @@ def graphe_mouvements_finaux(suivis, fichier):
             ax.text(positions[i], 0.5, "Aucun succès",
                     ha="center", va="center",
                     transform=ax.get_xaxis_transform(), fontsize=10)
+        ax.text(positions[i], 0.97,
+                f"{bilan['reussites']}/{bilan['tests']} réussites",
+                ha="center", va="top",
+                transform=ax.get_xaxis_transform(), fontsize=9,
+                color=ENCRE_SECONDAIRE)
 
     ax.set_ylabel("Nombre de mouvements (succès uniquement)")
     ax.set_ylim(bottom=0)
