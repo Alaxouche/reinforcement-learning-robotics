@@ -130,8 +130,8 @@ def grille_q(algorithme, environnement, action):
 def grille_valeurs(algorithme, environnement):
     """Grille de V(s) = max Q(s, a) sur les actions essayées. NaN si aucune (mur, arrivée...).
 
-    Une action jamais essayée garde son Q initial de 0 : avec des récompenses
-    négatives, elle masquerait dans le max tout ce que l'état a appris.
+    Une action jamais essayée conserve sa Q-value initiale aléatoire :
+    elle pourrait masquer dans le max des valeurs réellement apprises.
     """
     valeurs = np.where(algorithme.mises_a_jour > 0, algorithme.Q, -np.inf).max(axis=1)
     return en_grille(np.where(np.isfinite(valeurs), valeurs, np.nan), environnement)
