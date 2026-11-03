@@ -30,7 +30,8 @@ class TestBrasRobotique(unittest.TestCase):
                 if mode == "naive":
                     attendu = 10.0 if termine else -0.02
                 elif mode == "smart":
-                    attendu = -0.1 * distance_apres + (10.0 if termine else 0.0)
+                    attendu = ((10.0 if termine else -0.02) + distance_avant
+                               - (0.0 if termine else 0.95 * distance_apres))
                 else:
                     attendu = distance_avant - distance_apres + (10.0 if termine else 0.0)
                 self.assertAlmostEqual(recompense, attendu)
@@ -53,9 +54,25 @@ class TestBrasRobotique(unittest.TestCase):
                         break
                 self.assertIsNotNone(transition)
                 d_avant, d_apres, recompense = transition
-                attendu = (10.0 - 0.1 * d_apres if mode == "smart"
+                attendu = (10.0 + d_avant if mode == "smart"
                            else 10.0 + d_avant - d_apres)
                 self.assertAlmostEqual(recompense, attendu)
+
+    def test_smart_guidage_potentiel_en_accord_avec_gamma(self):
+        """Le guidage télescope jusqu'à la cible, avec potentiel terminal nul."""
+        env = BrasRobotSmart()
+        self.assertAlmostEqual(env.GAMMA_SHAPING, 0.95)
+        # Pour toute transition non terminale :
+        # F(s,s') = d(s) - gamma*d(s').
+        self.assertAlmostEqual(
+            env._recompense_transition(2.0, 1.8, False),
+            -0.02 + 2.0 - 0.95 * 1.8
+        )
+        # À l'arrivée, Phi(s') = 0 (et non -distance résiduelle).
+        self.assertAlmostEqual(
+            env._recompense_transition(0.2, 0.05, True),
+            10.0 + 0.2
+        )
 
     def test_depart_aleatoire_reproductible_et_non_terminal(self):
         a = BrasRobotSmart(depart_aleatoire=True, seed=123)
