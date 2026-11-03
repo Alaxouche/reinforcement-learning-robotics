@@ -14,7 +14,6 @@ Le programme entraîne le **labyrinthe 5×5** et les trois modes du bras
 - `experiences/resultats/bras_robotique/naive/`
 - `experiences/resultats/bras_robotique/smart/`
 - `experiences/resultats/bras_robotique/distance/`
-- `experiences/resultats/comparaison_labyrinthe_bras.png`
 
 Les anciens fichiers `1_convergence.png`, `2_epsilon_seeds.png`,
 `5_cartes_q.png`, `5b_carte_valeurs.png`, `7_carte_epsilon.png`,
@@ -28,10 +27,10 @@ lors de la prochaine génération : ils ne font plus partie de l'analyse.
 | `3_cartes_q_brutes.png` | Q(s,a) brute pour les quatre actions, du bleu clair (faible) au bleu foncé (élevée) |
 | `4_meilleure_action.png` | Meilleure action : flèches et chemin pour le labyrinthe, quatre couleurs pour les actions du bras (sans chemin superposé) |
 | `6_visites.png` | Nombre de passages par état |
-| `comparaison_labyrinthe_bras.png` | Concentration des visites, mises à jour par couple et taux de réussite |
 
-Les graphes 3, 4 et 6 sont créés pour chaque environnement.
-Le dernier est une comparaison globale.
+Les graphes 3, 4 et 6 sont créés pour chaque environnement. Le graphique de
+comparaison labyrinthe/bras a été retiré. Les indicateurs de synthèse restent
+affichés dans le terminal.
 
 ## Comment interpréter les cartes ?
 
