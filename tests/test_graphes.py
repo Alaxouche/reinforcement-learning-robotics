@@ -25,6 +25,27 @@ def agent_bras(seed=42, nb_episodes=50):
 
 
 class TestIndicateurs(unittest.TestCase):
+    def test_initialisation_aleatoire_reproductible_de_q(self):
+        """Q est aléatoire, centrée sur zéro et reproductible par graine."""
+        config = experience.EXPERIENCES[1]
+        premier, _ = experience.creer_agent(config, 42)
+        second, _ = experience.creer_agent(config, 42)
+        autre, _ = experience.creer_agent(config, 43)
+
+        np.testing.assert_array_equal(premier.Q, second.Q)
+        self.assertFalse(np.array_equal(premier.Q, autre.Q))
+        self.assertEqual(premier.Q.shape, (1296, 4))
+        self.assertTrue((premier.Q >= -0.1).all())
+        self.assertTrue((premier.Q <= 0.1).all())
+        self.assertTrue((premier.Q < 0).any())
+        self.assertTrue((premier.Q > 0).any())
+        self.assertFalse((premier.Q == 0).all())
+
+        # Pour comparer les récompenses, leur Q-table initiale est identique.
+        for config_mode in experience.EXPERIENCES[2:]:
+            agent, _ = experience.creer_agent(config_mode, 42)
+            np.testing.assert_array_equal(premier.Q, agent.Q)
+
     def test_compteurs_coherents(self):
         for env in (Labyrinthe5x5(), BrasRobotNaive(depart_aleatoire=True, seed=1)):
             with self.subTest(env=type(env).__name__):
