@@ -26,7 +26,7 @@ lors de la prochaine génération : ils ne font plus partie de l'analyse.
 | Fichier | Interprétation |
 |---|---|
 | `3_cartes_q_brutes.png` | Q(s,a) brute pour les quatre actions, du bleu clair (faible) au bleu foncé (élevée) |
-| `4_meilleure_action.png` | Politique gloutonne et chemin suivi : **flèches pour le labyrinthe**, **theta1+, theta1-, theta2+, theta2- pour le bras** |
+| `4_meilleure_action.png` | Meilleure action : flèches et chemin pour le labyrinthe, quatre couleurs pour les actions du bras (sans chemin superposé) |
 | `6_visites.png` | Nombre de passages par état |
 | `comparaison_labyrinthe_bras.png` | Concentration des visites, mises à jour par couple et taux de réussite |
 
@@ -47,15 +47,24 @@ une action impossible ou jamais essayée. Les échelles peuvent différer
 entre les modes naive, smart et distance ; il ne faut donc pas comparer
 leurs teintes directement.
 
-**Graphe 4 :** dans le labyrinthe, le départ unique est noté `S`
-et les flèches montrent la meilleure action (haut, bas, gauche, droite).
-Pour le bras, le nom écrit dans chaque case correspond à l'action ayant
-la plus grande Q-value (`theta1+`, `theta1-`, `theta2+` ou `theta2-`).
-**Aucun `S` n'est affiché sur les cartes du bras**, puisque chaque
-épisode d'entraînement commence depuis un état aléatoire. Le chemin
-superposé est uniquement **un exemple** depuis la configuration
-`(90°, 0°)`, pas le parcours de tous les épisodes. Son trait est
-interrompu visuellement quand un angle passe de 350° à 0°.
+**Graphe 4 :** dans le labyrinthe, le départ unique est noté `S`,
+les flèches montrent la meilleure action (haut, bas, gauche, droite), et
+le chemin glouton est superposé.
+
+Pour le **bras**, aucune étiquette textuelle ni aucun chemin de référence
+n'est superposé sur la grille 36 × 36. Chaque case visitée et non terminale
+est colorée suivant l'action de plus grande Q-value :
+- **bleu** : `theta1+` ;
+- **orange** : `theta1-` ;
+- **vert** : `theta2+` ;
+- **violet** : `theta2-`.
+
+Le **gris** représente un état jamais visité ou sans action possible.
+Les **deux configurations d'arrivée** sont entourées de cercles
+blancs bordés de noir. Il n'y a pas de `S` sur le bras, puisque les
+départs de l'entraînement sont aléatoires. Les graduations des angles
+sont affichées tous les 60 degrés. Ces couleurs distinguent les actions ;
+elles ne représentent ni une récompense ni la valeur de Q(s,a).
 
 **Graphe 6 :** les couleurs utilisent une **échelle log**
 pour rendre visibles les écarts de comptage entre les états peu et très
