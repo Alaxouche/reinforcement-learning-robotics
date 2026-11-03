@@ -101,6 +101,13 @@ Q, epsilon et générateurs aléatoires sont conservés entre blocs.
 
 ## Limites d'interprétation
 
+La Q-table n'est plus initialisée à zéro : chaque valeur Q(s,a) est
+tirée uniformément dans [-0,1 ; 0,1]. Avec la graine `42` réappliquée
+à chaque mode, les trois bras démarrent avec **la même table aléatoire**.
+Les expériences doivent être relancées : les anciens PNG correspondent
+à l'ancienne initialisation. Une action jamais essayée conserve toutefois
+sa valeur initiale, et ce biais potentiel n'est pas complètement supprimé.
+
 Les comparaisons reposent ici sur une seule graine (`42`) ; elles
 permettent de décrire une expérience, mais ne prouvent pas la convergence
 mathématique des Q-values ni la supériorité générale d'une récompense.
