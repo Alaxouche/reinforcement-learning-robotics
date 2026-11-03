@@ -352,7 +352,7 @@ def graphe_meilleure_action(algorithme, environnement, nom, fichier):
             solid_capstyle="round", zorder=2)
 
     statut = "objectif atteint" if atteint else "objectif non atteint"
-    ax.set_title(f"{nom} : meilleure action argmax Q(s, a) et chemin glouton\\n"
+    ax.set_title(f"{nom} : meilleure action argmax Q(s, a) et chemin glouton\n"
                  f"{len(chemin) - 1} déplacements, retour {retour:.2f}, {statut}")
     legende_cases(fig, environnement, "état jamais visité")
     fig.savefig(fichier, dpi=150)
