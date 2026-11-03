@@ -238,31 +238,6 @@ def ecrire_valeur(ax, ligne, colonne, texte, intensite):
 
 
 # ---------------------------------------------------------------------------
-# Graphe 1 : convergence de l'apprentissage
-# ---------------------------------------------------------------------------
-def graphe_convergence(algorithme, nom, fichier):
-    """Évolution brute des mesures, sans aucun lissage."""
-    episodes = range(1, len(algorithme.recompenses) + 1)
-
-    fig, axes = plt.subplots(3, 1, figsize=(9, 8), sharex=True)
-
-    axes[0].plot(episodes, algorithme.recompenses, color=COULEURS[0], linewidth=0.8)
-    axes[0].set_ylabel("récompense cumulée")
-
-    axes[1].plot(episodes, algorithme.nombre_actions, color=COULEURS[0], linewidth=0.8)
-    axes[1].set_ylabel("nombre de pas")
-
-    axes[2].plot(episodes, algorithme.epsilons, color=ENCRE_SECONDAIRE)
-    axes[2].set_ylabel("epsilon")
-    axes[2].set_xlabel("épisode")
-
-    fig.suptitle(f"{nom} : évolution du Q-learning par épisode")
-    fig.tight_layout()
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
-
-
-# ---------------------------------------------------------------------------
 # Graphe 3 : Q(s, a) brute en 2D, une carte par action
 # ---------------------------------------------------------------------------
 def graphe_cartes_q_brutes(algorithme, environnement, nom, fichier):
