@@ -18,7 +18,7 @@ reinforcement-learning-robotics/
 │   │   └── bras_robotique/
 │   │       ├── bras_robotique_2d.py   # Mécanique commune
 │   │       ├── bras_robot_naive.py    # +10 / -0.02
-│   │       ├── bras_robot_smart.py    # -d(k+1) + 10 si cible atteinte
+│   │       ├── bras_robot_smart.py    # -0.1*d(k+1) + 10 si cible atteinte
 │   │       └── bras_robot_distance.py # d(k) - d(k+1) + 10 si cible atteinte
 │   │
 │   └── visualisation/
@@ -179,9 +179,9 @@ Trois récompenses sont disponibles pour le même simulateur :
 
 - **Naive (parcimonieuse)** : `+10` lorsque la cible est atteinte,
   `-0.02` sinon.
-- **Smart** : `-distance_apres + (10 si termine sinon 0)`. On pénalise
-  directement la distance de l'extrémité du bras à la cible après l'action,
-  avec un bonus de 10 lorsque la cible est atteinte.
+- **Smart** : `-0.1 * distance_apres + (10 si termine sinon 0)`. On pénalise
+  la distance de l'extrémité du bras à la cible après l'action avec un
+  coefficient de 0,1, et un bonus de 10 lorsque la cible est atteinte.
 - **Distance** : `distance_avant - distance_apres + (10 si termine sinon 0)`.
   On évalue le rapprochement pendant le mouvement avec le même bonus terminal.
 
