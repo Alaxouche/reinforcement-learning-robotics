@@ -41,13 +41,15 @@ Le dernier est une comparaison globale.
 et les colonnes aux 36 valeurs de `theta2`. Une case représente une
 configuration angulaire, pas une position cartésienne de l'extrémité.
 
-**Graphe 4 :** le labyrinthe utilise les flèches habituelles (haut,
-bas, gauche, droite). Pour le bras, le nom écrit dans chaque case correspond
-à l'action ayant la plus grande Q-value dans cet état. `S` représente
-le départ de référence `(90°, 0°)`, utilisé seulement pour l'évaluation
-du bras ; pendant l'apprentissage, les départs sont aléatoires. Le chemin
-de référence est superposé et s'interrompt visuellement quand un angle
-passe de 350° à 0°, pour ne pas traverser toute la grille.
+**Graphe 4 :** dans le labyrinthe, le départ unique est noté `S`
+et les flèches montrent la meilleure action (haut, bas, gauche, droite).
+Pour le bras, le nom écrit dans chaque case correspond à l'action ayant
+la plus grande Q-value (`theta1+`, `theta1-`, `theta2+` ou `theta2-`).
+**Aucun `S` n'est affiché sur les cartes du bras**, puisque chaque
+épisode d'entraînement commence depuis un état aléatoire. Le chemin
+superposé est uniquement **un exemple** depuis la configuration
+`(90°, 0°)`, pas le parcours de tous les épisodes. Son trait est
+interrompu visuellement quand un angle passe de 350° à 0°.
 
 **Graphes 6 et 8 :** les couleurs utilisent une échelle logarithmique.
 Le gris indique un état jamais visité ou une action jamais mise à jour.
