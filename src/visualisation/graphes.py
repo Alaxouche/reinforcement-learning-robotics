@@ -403,3 +403,85 @@ def indicateurs(algorithme, environnement):
         "deplacements": len(chemin) - 1,
         "atteint": atteint,
     }
+
+
+# ---------------------------------------------------------------------------
+# Comparaison des récompenses du bras : évolution et efficacité finale
+# ---------------------------------------------------------------------------
+def graphe_progression_reussite(suivis, fichier):
+    """Compare le succès glouton à chaque point d'évaluation (mêmes départs)."""
+    fig, ax = plt.subplots(figsize=(11, 6), layout="constrained")
+    for i, (mode, bilans) in enumerate(suivis.items()):
+        episodes = [bilan["episode"] for bilan in bilans]
+        taux = [bilan["taux_reussite"] for bilan in bilans]
+        ax.plot(episodes, taux, marker="o", markersize=5, linewidth=2.2,
+                label=mode.capitalize(), color=COULEURS[i % len(COULEURS)])
+
+    bilans_reference = next(iter(suivis.values()))
+    ax.set_xticks([bilan["episode"] for bilan in bilans_reference])
+    ax.set_xlim(0, bilans_reference[-1]["episode"] * 1.02)
+    ax.set_ylim(0, 105)
+    ax.set_yticks(range(0, 101, 20))
+    ax.set_xlabel("Nombre d'épisodes d'entraînement")
+    ax.set_ylabel("Taux de réussite (%)")
+    ax.grid(True, alpha=0.2)
+    ax.legend(title="Récompense", loc="upper left")
+    ax.set_title("Bras robotique : vitesse d'apprentissage des trois récompenses")
+    fig.suptitle(
+        f"Politique gloutonne, mêmes {bilans_reference[-1]['tests']} départs de test, "
+        "50 mouvements maximum par essai",
+        fontsize=10, color=ENCRE_SECONDAIRE,
+    )
+    fig.savefig(fichier, dpi=150)
+    plt.close(fig)
+
+
+def graphe_mouvements_finaux(suivis, fichier):
+    """Compare les mouvements sur les succès finaux, sans dissimuler les échecs."""
+    modes = list(suivis)
+    bilans = [suivis[mode][-1] for mode in modes]
+    positions = np.arange(1, len(modes) + 1)
+
+    fig, (ax, ax_echecs) = plt.subplots(
+        2, 1, figsize=(10, 8), sharex=True, layout="constrained",
+        gridspec_kw={"height_ratios": [3.3, 1]},
+    )
+    for i, bilan in enumerate(bilans):
+        mouvements = bilan["mouvements_reussis"]
+        if mouvements:
+            elements = ax.boxplot(
+                [mouvements], positions=[positions[i]], widths=0.45,
+                patch_artist=True, showmeans=True,
+                medianprops={"color": ENCRE, "linewidth": 2},
+                meanprops={"marker": "D", "markerfacecolor": "white",
+                           "markeredgecolor": ENCRE, "markersize": 5},
+            )
+            for boite in elements["boxes"]:
+                boite.set_facecolor(COULEURS[i % len(COULEURS)])
+                boite.set_alpha(0.75)
+        else:
+            ax.text(positions[i], 0.5, "Aucun succès",
+                    ha="center", va="center",
+                    transform=ax.get_xaxis_transform(), fontsize=10)
+
+    ax.set_ylabel("Nombre de mouvements (succès uniquement)")
+    ax.set_ylim(bottom=0)
+    ax.grid(axis="y", alpha=0.2)
+    ax.set_title("Nombre de mouvements après entraînement (boîtes : essais réussis)")
+
+    couleurs = [COULEURS[i % len(COULEURS)] for i in range(len(modes))]
+    barres = ax_echecs.bar(positions, [bilan["echecs"] for bilan in bilans],
+                           color=couleurs, alpha=0.8, width=0.45)
+    ax_echecs.bar_label(barres, padding=3)
+    ax_echecs.set_ylabel("Échecs")
+    ax_echecs.set_ylim(0, max(bilan["tests"] for bilan in bilans) * 1.12 + 1)
+    ax_echecs.set_xticks(positions, [mode.capitalize() for mode in modes])
+    ax_echecs.set_xlabel("Fonction de récompense")
+    ax_echecs.grid(axis="y", alpha=0.15)
+    fig.suptitle(
+        f"Politiques gloutonnes après {bilans[0]['episode']} épisodes ; "
+        f"{bilans[0]['tests']} départs identiques, 50 mouvements maximum",
+        fontsize=11,
+    )
+    fig.savefig(fichier, dpi=150)
+    plt.close(fig)
