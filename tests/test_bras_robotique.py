@@ -30,7 +30,7 @@ class TestBrasRobotique(unittest.TestCase):
                 if mode == "naive":
                     attendu = 10.0 if termine else -0.02
                 elif mode == "smart":
-                    attendu = -distance_apres + (10.0 if termine else 0.0)
+                    attendu = -0.1 * distance_apres + (10.0 if termine else 0.0)
                 else:
                     attendu = distance_avant - distance_apres + (10.0 if termine else 0.0)
                 self.assertAlmostEqual(recompense, attendu)
@@ -53,7 +53,7 @@ class TestBrasRobotique(unittest.TestCase):
                         break
                 self.assertIsNotNone(transition)
                 d_avant, d_apres, recompense = transition
-                attendu = (10.0 - d_apres if mode == "smart"
+                attendu = (10.0 - 0.1 * d_apres if mode == "smart"
                            else 10.0 + d_avant - d_apres)
                 self.assertAlmostEqual(recompense, attendu)
 
