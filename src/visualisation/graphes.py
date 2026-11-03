@@ -62,15 +62,6 @@ plt.rcParams.update({
 # ---------------------------------------------------------------------------
 # Petites fonctions utilitaires
 # ---------------------------------------------------------------------------
-def moyenne_glissante(valeurs, fenetre):
-    """Moyenne des `fenetre` dernières valeurs, pour lisser une courbe."""
-    resultat = []
-    for i in range(len(valeurs)):
-        debut = max(0, i + 1 - fenetre)
-        resultat.append(np.mean(valeurs[debut:i + 1]))
-    return resultat
-
-
 def chemin_glouton(algorithme, environnement, etat=None):
     """Suit toujours la meilleure action depuis `etat`, sans exploration.
 
@@ -250,28 +241,22 @@ def ecrire_valeur(ax, ligne, colonne, texte, intensite):
 # Graphe 1 : convergence de l'apprentissage
 # ---------------------------------------------------------------------------
 def graphe_convergence(algorithme, nom, fichier):
-    recompenses = algorithme.recompenses
-    episodes = range(1, len(recompenses) + 1)
-    fenetre = max(10, len(recompenses) // 50)
+    """Évolution brute des mesures, sans aucun lissage."""
+    episodes = range(1, len(algorithme.recompenses) + 1)
 
     fig, axes = plt.subplots(3, 1, figsize=(9, 8), sharex=True)
 
-    axes[0].plot(episodes, recompenses, alpha=0.25, linewidth=1, label="par épisode")
-    axes[0].plot(episodes, moyenne_glissante(recompenses, fenetre), color=COULEURS[0],
-                 label=f"moyenne glissante ({fenetre} épisodes)")
+    axes[0].plot(episodes, algorithme.recompenses, color=COULEURS[0], linewidth=0.8)
     axes[0].set_ylabel("récompense cumulée")
-    axes[0].legend()
 
-    axes[1].plot(episodes, algorithme.nombre_actions, alpha=0.25, linewidth=1)
-    axes[1].plot(episodes, moyenne_glissante(algorithme.nombre_actions, fenetre),
-                 color=COULEURS[0])
+    axes[1].plot(episodes, algorithme.nombre_actions, color=COULEURS[0], linewidth=0.8)
     axes[1].set_ylabel("nombre de pas")
 
     axes[2].plot(episodes, algorithme.epsilons, color=ENCRE_SECONDAIRE)
     axes[2].set_ylabel("epsilon")
     axes[2].set_xlabel("épisode")
 
-    fig.suptitle(f"{nom} : convergence du Q-learning")
+    fig.suptitle(f"{nom} : évolution du Q-learning par épisode")
     fig.tight_layout()
     fig.savefig(fichier, dpi=150)
     plt.close(fig)
@@ -468,7 +453,6 @@ def barres_empilees(ax, noms, exploitations, explorations):
 
 def graphe_lien_epsilon_greedy(algorithme, environnement, nom, fichier):
     episodes = range(1, len(algorithme.epsilons) + 1)
-    fenetre = max(10, len(algorithme.epsilons) // 50)
     explorations = algorithme.explorations
     exploitations = algorithme.mises_a_jour - explorations
 
@@ -476,8 +460,8 @@ def graphe_lien_epsilon_greedy(algorithme, environnement, nom, fichier):
                                                          layout="constrained")
 
     # À gauche : la part d'actions tirées au hasard suit epsilon.
-    ax_temps.plot(episodes, moyenne_glissante(algorithme.taux_exploration, fenetre),
-                  color=COULEURS[1], label=f"part mesurée (moyenne sur {fenetre} épisodes)")
+    ax_temps.plot(episodes, algorithme.taux_exploration, color=COULEURS[1],
+                   linewidth=0.8, alpha=0.65, label="part mesurée par épisode")
     ax_temps.plot(episodes, algorithme.epsilons, color=ENCRE_SECONDAIRE, linestyle="--",
                   linewidth=1, label="epsilon")
     ax_temps.set_xlabel("épisode")
