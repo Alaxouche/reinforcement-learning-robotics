@@ -179,7 +179,7 @@ Trois récompenses sont disponibles pour le même simulateur :
 - **Distance** : `distance_avant - distance_apres + (10 si termine sinon 0)`.
   On évalue le rapprochement pendant le mouvement avec le même bonus terminal.
 
-Les trois modes donnent **+10 à l'arrivée** : seul le mode naive applique
+Les trois modes comprennent un **bonus terminal de +10** : seul le mode naive applique
 une pénalité fixe de `-0.02` aux mouvements non terminaux. Les modes
 smart et distance n'ont aucune pénalité fixe supplémentaire.
 
