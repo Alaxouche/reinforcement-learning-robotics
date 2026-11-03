@@ -378,7 +378,7 @@ def graphe_visites(algorithme, environnement, nom, fichier):
 
 
 # ---------------------------------------------------------------------------
-# Comparaison labyrinthe / bras
+# Indicateurs de synthèse affichés dans le terminal
 # ---------------------------------------------------------------------------
 def indicateurs(algorithme, environnement):
     """Mesures comparables entre environnements, dont les récompenses diffèrent."""
@@ -403,44 +403,3 @@ def indicateurs(algorithme, environnement):
         "deplacements": len(chemin) - 1,
         "atteint": atteint,
     }
-
-
-def graphe_comparaison(agents, fichier):
-    """agents : une entrée (nom, algorithme, environnement) par expérience."""
-    noms = [nom for nom, _, _ in agents]
-    mesures = [indicateurs(algorithme, environnement) for _, algorithme, environnement in agents]
-    positions = range(len(agents))
-
-    fig, (ax_visites, ax_couples, ax_reussite) = plt.subplots(1, 3, figsize=(15, 5.5),
-                                                              layout="constrained")
-
-    # À gauche : quelle part des passages se concentre sur les états les plus visités ?
-    for nom, algorithme, environnement in agents:
-        etats = environnement.nb_etats - len(getattr(environnement, "murs", []))
-        visites = np.sort(algorithme.visites)[::-1][:etats]
-        part_etats = 100 * np.arange(1, etats + 1) / etats
-        ax_visites.plot(part_etats, 100 * np.cumsum(visites) / visites.sum(), label=nom)
-    ax_visites.set_xlabel("% des états, du plus visité au moins visité")
-    ax_visites.set_ylabel("% cumulé des passages")
-    ax_visites.set_title("Concentration des passages")
-    ax_visites.legend(loc="lower right")
-
-    # Au milieu et à droite : une barre par expérience, valeur écrite au-dessus.
-    panneaux = [
-        (ax_couples, "mises_a_jour_par_couple", "Mises à jour par couple (s, a) autorisé",
-         "{:.0f}"),
-        (ax_reussite, "reussite_tous_departs", "Réussite de la politique depuis tous les états",
-         "{:.1f} %"),
-    ]
-    for ax, cle, titre, format_valeur in panneaux:
-        valeurs = [m[cle] for m in mesures]
-        barres = ax.bar(positions, valeurs, color=COULEURS[:len(agents)], width=0.6)
-        ax.bar_label(barres, [format_valeur.format(v) for v in valeurs], padding=4)
-        ax.set_xticks(positions, noms, rotation=15, ha="right")
-        ax.set_title(titre)
-        ax.set_yticks([])
-        ax.spines["left"].set_visible(False)
-
-    fig.suptitle("Labyrinthe et bras : même algorithme, espaces d'états différents")
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
