@@ -122,8 +122,10 @@ py -m experiences.graphes
 
 Les graphes conservés sont : Q-values brutes (3), meilleure action (4),
 visites (6), ainsi qu'une comparaison globale.
-Le graphe 4 dessine des **flèches dans le labyrinthe**, mais des
-**étiquettes theta1+/theta1-/theta2+/theta2- pour le bras**.
+Le graphe 4 affiche des **flèches et un chemin dans le labyrinthe**.
+Pour le bras, il présente **quatre couleurs selon l'action préférée**
+(theta1+, theta1-, theta2+, theta2-), sans texte ni chemin superposé ;
+les arrivées sont entourées de cercles.
 
 Les images sont enregistrées dans `experiences/resultats/`.
 Pour interpréter les graphiques :
