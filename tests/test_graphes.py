@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from matplotlib.colors import LogNorm
 
 from experiences import graphes as experience
 from experiences.entrainement_bras_robotique import MODES_BRAS
@@ -38,8 +39,8 @@ class TestIndicateurs(unittest.TestCase):
                 self.assertTrue((agent.explorations <= agent.mises_a_jour).all())
                 self.assertEqual(len(agent.epsilons), 40)
 
-    def test_cartes_comptage_echelle_lineaire(self):
-        """Les cartes de visites et de mises à jour n'utilisent pas LogNorm."""
+    def test_cartes_comptage_echelle_log(self):
+        """Les cartes utilisent LogNorm et laissent les zéros en gris."""
         environnements = [Labyrinthe5x5(),
                           BrasRobotNaive(depart_aleatoire=True, seed=42)]
         for env in environnements:
@@ -50,9 +51,11 @@ class TestIndicateurs(unittest.TestCase):
                 fig, ax = plt.subplots()
                 try:
                     image = graphes.afficher_comptages(ax, donnees, env, 20)
-                    self.assertEqual(image.norm.vmin, 0)
+                    self.assertIsInstance(image.norm, LogNorm)
+                    self.assertEqual(image.norm.vmin, 1)
                     self.assertEqual(image.norm.vmax, 20)
-                    self.assertAlmostEqual(float(image.norm(10)), 0.5)
+                    self.assertAlmostEqual(float(image.norm(1)), 0.0)
+                    self.assertAlmostEqual(float(image.norm(20)), 1.0)
                     self.assertTrue(np.ma.getmaskarray(image.get_array())[-1, -1])
                 finally:
                     plt.close(fig)
