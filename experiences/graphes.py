@@ -90,6 +90,7 @@ def evaluer_politique(algorithme, departs_test):
     reussites = len(mouvements_reussis)
     return {
         "tests": len(departs_test),
+        "max_pas": algorithme.max_pas,
         "reussites": reussites,
         "echecs": len(departs_test) - reussites,
         "taux_reussite": 100.0 * reussites / len(departs_test),
