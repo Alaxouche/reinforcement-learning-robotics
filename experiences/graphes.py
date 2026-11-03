@@ -1,6 +1,5 @@
 """Génère les graphes d'analyse du labyrinthe et du bras robotique.
 
-    1_convergence.png            récompense, pas et epsilon par épisode
     3_cartes_q_brutes.png        Q(s, a) brute en 2D, une carte par action
     4_meilleure_action.png       meilleure action dans chaque état et chemin suivi
     6_visites.png                nombre de passages par état
@@ -92,7 +91,7 @@ def main():
         dossier = DOSSIER_RESULTATS / config["dossier"]
         dossier.mkdir(parents=True, exist_ok=True)
         # Évite de conserver des images obsolètes créées par l'ancienne version.
-        for ancien in ("2_epsilon_seeds.png", "5_cartes_q.png", "5b_carte_valeurs.png"):
+        for ancien in ("1_convergence.png", "2_epsilon_seeds.png", "5_cartes_q.png", "5b_carte_valeurs.png"):
             (dossier / ancien).unlink(missing_ok=True)
         print(f"\n{nom}")
 
@@ -100,7 +99,6 @@ def main():
         algorithme, environnement = entrainer(config, SEED_REFERENCE)
         agents.append((nom, algorithme, environnement))
 
-        graphes.graphe_convergence(algorithme, nom, dossier / "1_convergence.png")
         graphes.graphe_cartes_q_brutes(algorithme, environnement, nom,
                                        dossier / "3_cartes_q_brutes.png")
         graphes.graphe_meilleure_action(algorithme, environnement, nom,
