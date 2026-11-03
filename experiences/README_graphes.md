@@ -117,15 +117,14 @@ Les comparaisons reposent ici sur une seule graine (`42`) ; elles
 permettent de décrire une expérience, mais ne prouvent pas la convergence
 mathématique des Q-values ni la supériorité générale d'une récompense.
 
-La récompense `smart` utilise maintenant un **guidage par potentiel** :
-`Phi(s) = -distance_cible(s)` hors arrivée et `Phi(arrivée) = 0`.
-La récompense de base est `+10` à l'arrivée et `-0.02` sinon ; on ajoute
-`0.95 * Phi(suivant) - Phi(courant)`. Ce terme transmet une information
-sur la distance tout en conservant une incitation forte à terminer.
-Le coefficient `0.95` est celui de `gamma` dans l'entraînement.
-La théorie de l'invariance des politiques par guidage à potentiel s'applique
-sous ses hypothèses ; nos épisodes sont néanmoins limités à 50 actions,
-ce qui nécessite de vérifier expérimentalement les performances.
+La récompense `smart` utilise à nouveau la formule simple
+`-distance_apres + (10 si termine sinon 0)` : elle favorise une faible
+distance à la cible après chaque action, avec un bonus de réussite de `+10`.
+Elle ne mesure pas la variation de distance ; c'est le rôle distinct
+du mode `distance`.
+
+Ce retour à une formule simple n'implique pas que ses résultats soient
+meilleurs : les graphiques doivent être régénérés pour l'évaluer.
 
 Les PNG générés avant ce changement sont obsolètes : relancer le script
 pour produire les résultats correspondants.
