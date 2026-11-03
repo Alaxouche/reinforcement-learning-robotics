@@ -112,6 +112,10 @@ Les comparaisons reposent ici sur une seule graine (`42`) ; elles
 permettent de décrire une expérience, mais ne prouvent pas la convergence
 mathématique des Q-values ni la supériorité générale d'une récompense.
 
+La récompense `smart` utilise désormais la pénalité `-0.1 * distance_apres`
+et le bonus terminal `+10`. Les PNG générés avant ce changement sont obsolètes :
+relancer le script pour produire les résultats correspondants.
+
 Les récompenses des modes naive, smart et distance ont des échelles
 différentes ; privilégier le taux de réussite et le nombre d'actions
 pour les comparer.
