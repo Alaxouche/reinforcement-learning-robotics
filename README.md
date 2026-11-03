@@ -18,7 +18,7 @@ reinforcement-learning-robotics/
 │   │   └── bras_robotique/
 │   │       ├── bras_robotique_2d.py   # Mécanique commune
 │   │       ├── bras_robot_naive.py    # +10 / -0.02
-│   │       ├── bras_robot_smart.py    # -0.1*d(k+1) + 10 si cible atteinte
+│   │       ├── bras_robot_smart.py    # récompense à potentiel, bonus terminal +10
 │   │       └── bras_robot_distance.py # d(k) - d(k+1) + 10 si cible atteinte
 │   │
 │   └── visualisation/
@@ -179,15 +179,19 @@ Trois récompenses sont disponibles pour le même simulateur :
 
 - **Naive (parcimonieuse)** : `+10` lorsque la cible est atteinte,
   `-0.02` sinon.
-- **Smart** : `-0.1 * distance_apres + (10 si termine sinon 0)`. On pénalise
-  la distance de l'extrémité du bras à la cible après l'action avec un
-  coefficient de 0,1, et un bonus de 10 lorsque la cible est atteinte.
+- **Smart** : une récompense de base `+10` à l'arrivée et `-0.02` sinon,
+  complétée par un **guidage à potentiel de distance** :
+  `r = r_base + distance_avant - 0.95 * distance_apres` hors arrivée,
+  `r = 10 + distance_avant` à l'arrivée (potentiel terminal nul).
+  Le coefficient `0.95` correspond au facteur `gamma` du Q-learning et
+  doit rester égal à celui-ci si les hyperparamètres changent.
 - **Distance** : `distance_avant - distance_apres + (10 si termine sinon 0)`.
   On évalue le rapprochement pendant le mouvement avec le même bonus terminal.
 
-Les trois modes comprennent un **bonus terminal de +10** : seul le mode naive applique
-une pénalité fixe de `-0.02` aux mouvements non terminaux. Les modes
-smart et distance n'ont aucune pénalité fixe supplémentaire.
+Les trois modes comprennent un **bonus terminal de +10**. Les modes naive
+et smart utilisent `-0.02` par mouvement non terminal ; smart ajoute un
+signal de proximité fondé sur la différence des potentiels de distance.
+Le mode distance utilise directement le changement de distance sans pénalité fixe.
 
 Les trois variantes utilisent les mêmes états, actions, angles, cible
 et hyperparamètres. Seule la fonction de récompense change.
