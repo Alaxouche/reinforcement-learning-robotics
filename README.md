@@ -120,9 +120,9 @@ py -m pip install -r requirements.txt
 py -m experiences.graphes
 ```
 
-Les graphes conservés sont : convergence (1), Q-values brutes (3),
-meilleure action (4), visites (6), carte epsilon (7), mises à jour (8),
-lien avec epsilon-greedy (9), ainsi qu'une comparaison globale.
+Les graphes conservés sont : Q-values brutes (3), meilleure action (4),
+visites (6), carte epsilon (7), mises à jour (8), lien avec
+epsilon-greedy (9), ainsi qu'une comparaison globale.
 Le graphe 4 dessine des **flèches dans le labyrinthe**, mais des
 **étiquettes theta1+/theta1-/theta2+/theta2- pour le bras**.
 
