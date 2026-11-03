@@ -18,7 +18,7 @@ CLASSES_BRAS = {
 
 
 class TestBrasRobotique(unittest.TestCase):
-    def test_recompenses_ancienne_et_nouvelle(self):
+    def test_recompenses_avec_bonus_terminal(self):
         for mode in ("naive", "smart", "distance"):
             with self.subTest(mode=mode):
                 env = CLASSES_BRAS[mode]()
@@ -30,12 +30,12 @@ class TestBrasRobotique(unittest.TestCase):
                 if mode == "naive":
                     attendu = 10.0 if termine else -0.02
                 elif mode == "smart":
-                    attendu = -distance_apres
+                    attendu = -distance_apres + (10.0 if termine else 0.0)
                 else:
-                    attendu = distance_avant - distance_apres
+                    attendu = distance_avant - distance_apres + (10.0 if termine else 0.0)
                 self.assertAlmostEqual(recompense, attendu)
 
-    def test_recompense_terminale_sans_bonus_smart_ou_distance(self):
+    def test_recompense_terminale_avec_bonus_smart_et_distance(self):
         for mode in ("smart", "distance"):
             with self.subTest(mode=mode):
                 env = CLASSES_BRAS[mode]()
@@ -53,7 +53,8 @@ class TestBrasRobotique(unittest.TestCase):
                         break
                 self.assertIsNotNone(transition)
                 d_avant, d_apres, recompense = transition
-                attendu = -d_apres if mode == "smart" else d_avant - d_apres
+                attendu = (10.0 - d_apres if mode == "smart"
+                           else 10.0 + d_avant - d_apres)
                 self.assertAlmostEqual(recompense, attendu)
 
     def test_depart_aleatoire_reproductible_et_non_terminal(self):
