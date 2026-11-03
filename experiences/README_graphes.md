@@ -16,13 +16,14 @@ Le programme entraîne les **labyrinthes 5×5 et 36×36** et les trois modes du 
 - `experiences/resultats/bras_robotique/smart/`
 - `experiences/resultats/bras_robotique/distance/`
 - `experiences/resultats/bras_robotique/comparaison_reussite_apprentissage.png`
-- `experiences/resultats/bras_robotique/comparaison_mouvements_finaux.png`
 - `experiences/resultats/bras_robotique/comparaison_longueur_episodes.png`
 
 Les anciens fichiers `1_convergence.png`, `2_epsilon_seeds.png`,
 `5_cartes_q.png`, `5b_carte_valeurs.png`, `7_carte_epsilon.png`,
 `8_mises_a_jour.png` et `9_lien_epsilon_greedy.png` sont supprimés
 lors de la prochaine génération : ils ne font plus partie de l'analyse.
+Le PNG `comparaison_mouvements_finaux.png` (ancien boxplot) est également
+supprimé automatiquement lors de la prochaine exécution.
 
 ## Graphiques conservés
 
@@ -36,7 +37,6 @@ lors de la prochaine génération : ils ne font plus partie de l'analyse.
 | `comparaison_5x5_36x36.png` | Longueur des épisodes / plus court chemin, % de cases menant à l'arrivée, % de cases avec chemin optimal, et chemin depuis S, en fonction de la progression de l'entraînement (%) |
 | `comparaison_longueur_episodes.png` | Bras : mouvements par épisode pendant l'entraînement (moyenne glissante sur 100), comparable entre récompenses |
 | `comparaison_reussite_apprentissage.png` | Trois courbes de taux de réussite, tous les 500 épisodes, sur les mêmes 30 départs |
-| `comparaison_mouvements_finaux.png` | Boxplots des mouvements pour les essais réussis après 5 000 épisodes, avec le nombre d'échecs de chaque mode |
 
 Les graphes 3, 4, 6 et 6b sont créés pour chaque environnement, le 7 pour les
 labyrinthes. Les graphiques `comparaison_*` du bras comparent
@@ -98,15 +98,6 @@ avec une graine fixe (`42 + 10 000`). Chaque essai est limité à 50 mouvements.
 La courbe mesure le pourcentage de départs ayant atteint la cible.
 Les 10 points de chaque courbe correspondent aux épisodes 500, 1 000, ...
 5 000 ; ce ne sont **pas des moyennes glissantes**.
-
-**Nombre de mouvements final :** après les 5 000 épisodes, le diagramme en
-boîtes présente la distribution du nombre de mouvements **parmi les
-essais réussis**. Le panneau inférieur indique explicitement combien
-d'essais ont échoué (sur 30) : une politique qui ne réussit que les
-départs faciles ne doit pas être considérée comme meilleure en raison
-d'une faible médiane sur ses rares succès. Les losanges blancs indiquent
-la moyenne et les traits dans les boîtes la médiane. Quand un mode n'a
-aucune réussite, aucune boîte n'est dessinée.
 
 Les évaluations sont déterministes : aucune exploration, aucun tirage
 aléatoire, aucune mise à jour des Q-values ni des compteurs. Elles
