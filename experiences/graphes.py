@@ -3,8 +3,6 @@
     3_cartes_q_brutes.png        Q(s, a) brute en 2D, une carte par action
     4_meilleure_action.png       meilleure action dans chaque état et chemin suivi
     6_visites.png                nombre de passages par état
-    8_mises_a_jour.png           nombre de mises à jour de chaque action
-    9_lien_epsilon_greedy.png    lien entre ces mises à jour et epsilon-greedy
 
 Les images sont écrites dans experiences/resultats/labyrinthes/ et
 experiences/resultats/bras_robotique/<mode>/ (naive, smart, distance), et la
@@ -90,7 +88,9 @@ def main():
         dossier = DOSSIER_RESULTATS / config["dossier"]
         dossier.mkdir(parents=True, exist_ok=True)
         # Évite de conserver des images obsolètes créées par l'ancienne version.
-        for ancien in ("1_convergence.png", "2_epsilon_seeds.png", "5_cartes_q.png", "5b_carte_valeurs.png", "7_carte_epsilon.png"):
+        for ancien in ("1_convergence.png", "2_epsilon_seeds.png", "5_cartes_q.png",
+                       "5b_carte_valeurs.png", "7_carte_epsilon.png",
+                       "8_mises_a_jour.png", "9_lien_epsilon_greedy.png"):
             (dossier / ancien).unlink(missing_ok=True)
         print(f"\n{nom}")
 
@@ -103,10 +103,6 @@ def main():
         graphes.graphe_meilleure_action(algorithme, environnement, nom,
                                         dossier / "4_meilleure_action.png")
         graphes.graphe_visites(algorithme, environnement, nom, dossier / "6_visites.png")
-        graphes.graphe_mises_a_jour(algorithme, environnement, nom,
-                                    dossier / "8_mises_a_jour.png")
-        graphes.graphe_lien_epsilon_greedy(algorithme, environnement, nom,
-                                           dossier / "9_lien_epsilon_greedy.png")
 
         print(f"    graphes écrits dans {dossier}")
 
