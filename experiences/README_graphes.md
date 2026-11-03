@@ -51,7 +51,9 @@ superposé est uniquement **un exemple** depuis la configuration
 `(90°, 0°)`, pas le parcours de tous les épisodes. Son trait est
 interrompu visuellement quand un angle passe de 350° à 0°.
 
-**Graphes 6 et 8 :** les couleurs utilisent une échelle logarithmique.
+**Graphes 6 et 8 :** les couleurs utilisent désormais une échelle
+**linéaire** : une valeur deux fois plus grande correspond à un comptage
+deux fois plus élevé, avec la même échelle de 0 au maximum de la figure.
 Le gris indique un état jamais visité ou une action jamais mise à jour.
 Une mise à jour de Q correspond à un mouvement de l'agent ; les visites
 comptent aussi l'état initial de chaque épisode.
