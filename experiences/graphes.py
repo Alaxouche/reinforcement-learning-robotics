@@ -7,7 +7,6 @@
     7_ecart_optimal.png          (labyrinthes) écart au retour optimal depuis chaque case
     comparaison_5x5_36x36.png               (labyrinthes) effet de la taille
     comparaison_reussite_apprentissage.png  taux de réussite, tous les 500 épisodes
-    comparaison_mouvements_finaux.png       mouvements réussis et échecs après 5 000 épisodes
     comparaison_longueur_episodes.png       mouvements par épisode pendant l'entraînement
 
 Les cartes sont écrites dans experiences/resultats/labyrinthes/<taille>/
@@ -310,13 +309,12 @@ def main():
     graphes.graphe_progression_reussite(
         suivis_bras, dossier_bras / "comparaison_reussite_apprentissage.png"
     )
-    graphes.graphe_mouvements_finaux(
-        suivis_bras, dossier_bras / "comparaison_mouvements_finaux.png"
-    )
+    # Élimine aussi le PNG produit localement par les anciennes versions.
+    (dossier_bras / "comparaison_mouvements_finaux.png").unlink(missing_ok=True)
     graphes.graphe_longueur_episodes_bras(
         algorithmes_bras, dossier_bras / "comparaison_longueur_episodes.png"
     )
-    print(f"\nComparaison des récompenses : 3 graphiques dans {dossier_bras}")
+    print(f"\nComparaison des récompenses : 2 graphiques dans {dossier_bras}")
 
     dossier_labyrinthes = DOSSIER_RESULTATS / "labyrinthes"
     graphes.graphe_comparaison_labyrinthes(
