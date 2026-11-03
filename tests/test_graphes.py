@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from matplotlib.colors import LogNorm
+from matplotlib.colors import LogNorm, to_rgba
 
 from experiences import graphes as experience
 from experiences.entrainement_bras_robotique import MODES_BRAS
@@ -38,6 +38,40 @@ class TestIndicateurs(unittest.TestCase):
                 self.assertEqual(agent.mises_a_jour.sum(), sum(agent.nombre_actions))
                 self.assertTrue((agent.explorations <= agent.mises_a_jour).all())
                 self.assertEqual(len(agent.epsilons), 40)
+
+    def test_q_values_bleus_sans_changer_les_valeurs(self):
+        """Quatre cartes bleues à échelle commune ; données absentes grises."""
+        env = Labyrinthe5x5()
+        agent = QLearning(environnement=env, alpha=0.1, gamma=0.9,
+                          epsilon=1.0, epsilon_min=0.05, decroissance=0.99,
+                          nb_episodes=1, max_pas=2)
+        agent.Q[0, 0] = -3.0
+        agent.Q[1, 0] = 5.0
+        agent.mises_a_jour[0, 0] = 1
+        agent.mises_a_jour[1, 0] = 1
+
+        images = []
+        original_imshow = Axes.imshow
+
+        def enregistrer_image(ax, *args, **kwargs):
+            image = original_imshow(ax, *args, **kwargs)
+            images.append(image)
+            return image
+
+        with (mock.patch.object(Axes, "imshow", enregistrer_image),
+              mock.patch.object(Figure, "savefig")):
+            graphes.graphe_cartes_q_brutes(agent, env, "Labyrinthe", "inutilise.png")
+
+        self.assertEqual(len(images), env.nb_actions)
+        for image in images:
+            self.assertEqual(image.norm.vmin, -3.0)
+            self.assertEqual(image.norm.vmax, 5.0)
+            self.assertEqual(image.cmap.name, graphes.BLEUS_Q.name)
+            self.assertTrue(np.allclose(image.cmap.get_bad(),
+                                        to_rgba(graphes.SANS_DONNEE)))
+        self.assertAlmostEqual(float(images[0].get_array()[0, 0]), -3.0)
+        self.assertAlmostEqual(float(images[0].get_array()[0, 1]), 5.0)
+        self.assertTrue(np.ma.getmaskarray(images[0].get_array())[0, 2])
 
     def test_cartes_comptage_echelle_log(self):
         """Les cartes utilisent LogNorm et laissent les zéros en gris."""
