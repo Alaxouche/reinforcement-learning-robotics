@@ -18,8 +18,8 @@ reinforcement-learning-robotics/
 │   │   └── bras_robotique/
 │   │       ├── bras_robotique_2d.py   # Mécanique commune
 │   │       ├── bras_robot_naive.py    # +10 / -0.02
-│   │       ├── bras_robot_smart.py    # -d(k+1)
-│   │       └── bras_robot_distance.py # d(k) - d(k+1)
+│   │       ├── bras_robot_smart.py    # -d(k+1) + 10 si cible atteinte
+│   │       └── bras_robot_distance.py # d(k) - d(k+1) + 10 si cible atteinte
 │   │
 │   └── visualisation/
 │       └── graphes.py                 # Fonctions de tracé
@@ -173,14 +173,15 @@ Trois récompenses sont disponibles pour le même simulateur :
 
 - **Naive (parcimonieuse)** : `+10` lorsque la cible est atteinte,
   `-0.02` sinon.
-- **Smart** : `-distance_apres`. On pénalise directement la distance
-  de l'extrémité du bras à la cible après l'action.
-- **Distance** : `distance_avant - distance_apres`. On évalue la
-  différence de distance à la cible entre les deux positions.
+- **Smart** : `-distance_apres + (10 si termine sinon 0)`. On pénalise
+  directement la distance de l'extrémité du bras à la cible après l'action,
+  avec un bonus de 10 lorsque la cible est atteinte.
+- **Distance** : `distance_avant - distance_apres + (10 si termine sinon 0)`.
+  On évalue le rapprochement pendant le mouvement avec le même bonus terminal.
 
-Seul le mode naive utilise un bonus `+10` à l'arrivée et une pénalité
-`-0.02` en dehors de la cible. Smart et distance utilisent exactement
-les formules indiquées, sans coefficient, pénalité fixe ni bonus d'arrivée.
+Les trois modes donnent **+10 à l'arrivée** : seul le mode naive applique
+une pénalité fixe de `-0.02` aux mouvements non terminaux. Les modes
+smart et distance n'ont aucune pénalité fixe supplémentaire.
 
 Les trois variantes utilisent les mêmes états, actions, angles, cible
 et hyperparamètres. Seule la fonction de récompense change.
