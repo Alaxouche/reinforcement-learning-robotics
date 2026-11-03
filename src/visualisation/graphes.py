@@ -27,16 +27,14 @@ FOND = "#fcfcfb"
 MUR = "#52514e"
 PIEGE = "#d03b3b"
 ARRIVEE = "#0ca30c"
-SANS_DONNEE = "#c3c2b7"  # gris plus soutenu, le zéro de ROUGE_BLEU étant déjà gris clair
+SANS_DONNEE = "#c3c2b7"  # gris pour une action impossible ou jamais essayée
 
 # Magnitude : une seule teinte, du clair au foncé. Gris : pas de donnée.
 BLEUS = LinearSegmentedColormap.from_list(
     "bleus", ["#cde2fb", "#6da7ec", "#2a78d6", "#1c5cab", "#0d366b"]
 ).with_extremes(bad=GRILLE)
-# Signe : rouge = valeur négative, gris clair = zéro, bleu = valeur positive.
-ROUGE_BLEU = LinearSegmentedColormap.from_list(
-    "rouge_bleu", ["#a32b2a", "#e34948", "#f0efec", "#2a78d6", "#104281"]
-).with_extremes(bad=SANS_DONNEE)
+# Même dégradé bleu pour les Q-values, mais gris spécifique aux données absentes.
+BLEUS_Q = BLEUS.with_extremes(bad=SANS_DONNEE)
 
 plt.rcParams.update({
     "font.sans-serif": ["Segoe UI", "DejaVu Sans"],
@@ -241,13 +239,23 @@ def ecrire_valeur(ax, ligne, colonne, texte, intensite):
 def graphe_cartes_q_brutes(algorithme, environnement, nom, fichier):
     grilles = [grille_q(algorithme, environnement, action)
                for action in range(environnement.nb_actions)]
-    borne = np.nanmax(np.abs(grilles))  # même échelle pour les 4 cartes, 0 au centre
+
+    # Une même échelle linéaire pour les quatre cartes de cet environnement,
+    # déterminée par les Q-values effectivement apprises, y compris négatives.
+    observees = np.concatenate([grille[np.isfinite(grille)] for grille in grilles])
+    if observees.size:
+        minimum, maximum = float(observees.min()), float(observees.max())
+        if np.isclose(minimum, maximum):
+            minimum -= 0.5
+            maximum += 0.5
+    else:
+        minimum, maximum = 0.0, 1.0
 
     taille = (12, 11) if est_bras(environnement) else (11, 10)
     fig, axes = plt.subplots(2, 2, figsize=taille, layout="constrained")
 
     for action, ax in enumerate(axes.flat):
-        image = ax.imshow(grilles[action], cmap=ROUGE_BLEU, vmin=-borne, vmax=borne)
+        image = ax.imshow(grilles[action], cmap=BLEUS_Q, vmin=minimum, vmax=maximum)
         preparer_grille(ax, environnement)
         marquer_cases(ax, environnement)
         ax.set_title(f"action {action} : {environnement.noms_actions[action]}")
@@ -255,9 +263,10 @@ def graphe_cartes_q_brutes(algorithme, environnement, nom, fichier):
         if not est_bras(environnement):
             for (ligne, colonne), q in np.ndenumerate(grilles[action]):
                 if np.isfinite(q):
-                    ecrire_valeur(ax, ligne, colonne, f"{q:.2f}", abs(q) / borne)
+                    ecrire_valeur(ax, ligne, colonne, f"{q:.2f}", image.norm(q))
 
-    fig.colorbar(image, ax=axes, shrink=0.8, label="Q(s, a) : rouge = négatif, bleu = positif")
+    fig.colorbar(image, ax=axes, shrink=0.8,
+                 label="Q(s, a) : bleu clair = valeur faible, bleu foncé = valeur élevée")
     fig.suptitle(f"{nom} : Q-values brutes par action")
     legende_cases(fig, environnement, "action impossible ou jamais essayée", SANS_DONNEE)
     fig.savefig(fichier, dpi=150)
