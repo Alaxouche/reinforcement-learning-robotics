@@ -8,35 +8,45 @@ py -m experiences.graphes
 ```
 
 Le programme entraîne les **labyrinthes 5×5 et 36×36** et les trois modes du bras
-(**naive, smart, distance**) avec la graine `42`. Il enregistre des PNG dans :
+(**naive, smart, distance**), à **4 puis à 9 actions**, avec la graine `42`.
+Il enregistre des PNG dans :
 
 - `experiences/resultats/labyrinthes/5x5/` et `experiences/resultats/labyrinthes/36x36/`
 - `experiences/resultats/labyrinthes/comparaison_5x5_36x36.png`
-- `experiences/resultats/bras_robotique/naive/`
-- `experiences/resultats/bras_robotique/smart/`
-- `experiences/resultats/bras_robotique/distance/`
-- `experiences/resultats/bras_robotique/comparaison_reussite_apprentissage.png`
-- `experiences/resultats/bras_robotique/comparaison_longueur_episodes.png`
+- `experiences/resultats/bras_robotique/<n>_actions/naive/`, `.../smart/`, `.../distance/`
+  (`<n>` = 4 ou 9)
+- `experiences/resultats/bras_robotique/<n>_actions/comparaison_reussite_apprentissage.png`
+- `experiences/resultats/bras_robotique/<n>_actions/comparaison_longueur_episodes.png`
+- `experiences/resultats/bras_robotique/comparaison_4_9_actions.png`
+
+L'étude de epsilon (`py -m experiences.etude_epsilon`, ≈ 3 minutes) écrit ses
+graphes dans `experiences/resultats/bras_robotique/epsilon/9_actions/`.
 
 Les anciens fichiers `1_convergence.png`, `2_epsilon_seeds.png`,
 `5_cartes_q.png`, `5b_carte_valeurs.png`, `7_carte_epsilon.png`,
 `8_mises_a_jour.png` et `9_lien_epsilon_greedy.png` sont supprimés
 lors de la prochaine génération : ils ne font plus partie de l'analyse.
 Le PNG `comparaison_mouvements_finaux.png` (ancien boxplot) est également
-supprimé automatiquement lors de la prochaine exécution.
+supprimé automatiquement lors de la prochaine exécution, ainsi que les cartes
+rangées dans les anciens dossiers `bras_robotique/<mode>/` et les comparaisons
+placées directement dans `bras_robotique/` avant le passage à 4 / 9 actions.
 
 ## Graphiques conservés
 
 | Fichier | Interprétation |
 |---|---|
-| `3_cartes_q_brutes.png` | Q(s,a) brute pour les quatre actions, du bleu clair (faible) au bleu foncé (élevée) |
-| `4_meilleure_action.png` | Meilleure action : flèches et chemin pour le labyrinthe, quatre couleurs pour les actions du bras (sans chemin superposé) |
+| `3_cartes_q_brutes.png` | Q(s,a) brute pour chaque action (2×2 cartes pour 4 actions, 3×3 pour 9), du bleu clair (faible) au bleu foncé (élevée) |
+| `4_meilleure_action.png` | Meilleure action : flèches et chemin pour le labyrinthe, quatre couleurs pour le bras à 4 actions, deux cartes (variation de theta1, variation de theta2) pour le bras à 9 actions |
 | `6_visites.png` | Couleur : passages par état. Dans chaque case : passages (haut) / mises à jour de Q (bas). L'écart vient du départ de chaque épisode (passage sans action préalable) et de l'arrivée (visitée, jamais mise à jour). Le 36×36 est une grande image à zoomer |
-| `6b_passages_par_action.png` | Une carte par action (haut/bas/gauche/droite ; pour le bras theta1±, theta2± sur la grille des couples (theta1, theta2)) : nombre de fois où l'action a été jouée depuis chaque case. Même palette bleue et même échelle log pour comparer les quatre cartes |
+| `6b_passages_par_action.png` | Une carte par action (haut/bas/gauche/droite ; pour le bras theta1±, theta2±, plus les quatre combinaisons et l'action immobile à 9 actions, sur la grille des couples (theta1, theta2)) : nombre de fois où l'action a été jouée depuis chaque case. Même palette bleue et même échelle log pour comparer toutes les cartes |
 | `7_ecart_optimal.png` | (labyrinthes) Si l'agent partait de chaque case et suivait sa politique apprise : bleu très clair = chemin optimal, bleu plus foncé = arrivée atteinte avec détour, orange pâle = la politique tourne en rond (case peu apprise). Le trait noir est le chemin appris depuis S. L'optimum est calculé exactement (Dijkstra sur les récompenses) |
 | `comparaison_5x5_36x36.png` | Longueur des épisodes / plus court chemin, % de cases menant à l'arrivée, % de cases avec chemin optimal, et chemin depuis S, en fonction de la progression de l'entraînement (%) |
 | `comparaison_longueur_episodes.png` | Bras : mouvements par épisode pendant l'entraînement (moyenne glissante sur 100), comparable entre récompenses |
 | `comparaison_reussite_apprentissage.png` | Trois courbes de taux de réussite, tous les 500 épisodes, sur les mêmes 30 départs |
+| `comparaison_4_9_actions.png` | Bras : réussite et longueur des épisodes, couleur = récompense, trait plein = 4 actions, tirets = 9 actions |
+| `epsilon/.../couverture_couples.png` | Étude de epsilon : part des couples (s, a) essayés au moins une fois au fil de l'entraînement, une courbe par epsilon (bleu clair = faible, foncé = élevé), une colonne par initialisation de Q, une ligne par récompense |
+| `epsilon/.../reussite.png` | Même disposition, réussite de la politique gloutonne sur les 30 départs de test |
+| `epsilon/.../bilan_epsilon.png` | Mesures finales en fonction d'epsilon : couples essayés, réussite, longueur des 500 derniers épisodes ; bleu = Q initiale constante, orange = Q initiale aléatoire |
 
 Les graphes 3, 4, 6 et 6b sont créés pour chaque environnement, le 7 pour les
 labyrinthes. Les graphiques `comparaison_*` du bras comparent
@@ -83,6 +93,14 @@ blancs bordés de noir. Il n'y a pas de `S` sur le bras, puisque les
 départs de l'entraînement sont aléatoires. Les graduations des angles
 sont affichées tous les 60 degrés. Ces couleurs distinguent les actions ;
 elles ne représentent ni une récompense ni la valeur de Q(s,a).
+
+Pour le **bras à 9 actions**, neuf couleurs catégorielles ne seraient pas
+distinguables. La meilleure action est donc décomposée en deux cartes côte
+à côte : la variation choisie pour `theta1` et celle choisie pour `theta2`.
+**Bleu** = l'angle augmente, **rouge** = il diminue, **gris très clair** =
+l'articulation ne bouge pas. Une case bleue ou rouge sur les deux cartes
+correspond à un mouvement simultané ; gris très clair sur les deux, à l'action
+immobile. Le titre indique la part des états visités pour chacun de ces cas.
 
 **Graphe 6 :** les couleurs utilisent une **échelle log**
 pour rendre visibles les écarts de comptage entre les états peu et très

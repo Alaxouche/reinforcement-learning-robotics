@@ -41,10 +41,16 @@ class TestIndicateurs(unittest.TestCase):
         self.assertTrue((premier.Q > 0).any())
         self.assertFalse((premier.Q == 0).all())
 
-        # Pour comparer les récompenses, leur Q-table initiale est identique.
-        for config_mode in experience.EXPERIENCES_BRAS[1:]:
+        # Pour comparer les récompenses, leur Q-table initiale est identique
+        # (à nombre d'actions égal ; 9 actions donnent une table 1296 x 9).
+        references = {}
+        for config_mode in experience.EXPERIENCES_BRAS:
             agent, _ = experience.creer_agent(config_mode, 42)
-            np.testing.assert_array_equal(premier.Q, agent.Q)
+            self.assertEqual(agent.Q.shape, (1296, config_mode["nb_actions"]))
+            reference = references.setdefault(config_mode["nb_actions"], agent.Q)
+            np.testing.assert_array_equal(reference, agent.Q)
+        np.testing.assert_array_equal(premier.Q, references[4])
+        self.assertEqual(sorted(references), [4, 9])
 
     def test_compteurs_coherents(self):
         for env in (Labyrinthe5x5(), BrasRobotNaive(depart_aleatoire=True, seed=1)):
@@ -321,6 +327,95 @@ class TestChemin(unittest.TestCase):
             self.assertGreater(chemins.call_count, 0)
             self.assertFalse(any("theta" in str(appel)
                                  for appel in textes.call_args_list))
+
+
+class TestNeufActions(unittest.TestCase):
+    def agent_9(self, nb_episodes=5):
+        np.random.seed(42)
+        env = BrasRobotNaive(depart_aleatoire=True, seed=42, nb_actions=9)
+        agent = QLearning(environnement=env, alpha=0.2, gamma=0.95, epsilon=1.0,
+                          epsilon_min=0.15, decroissance=0.9995,
+                          nb_episodes=nb_episodes, max_pas=12)
+        agent.apprendre()
+        return agent
+
+    def test_cartes_par_action_3x3(self):
+        """Neuf cartes Q et neuf cartes de passages, une par action."""
+        agent = self.agent_9()
+        self.assertEqual(graphes.disposition_actions(4), (2, 2))
+        self.assertEqual(graphes.disposition_actions(9), (3, 3))
+        for fonction in (graphes.graphe_cartes_q_brutes, graphes.graphe_passages_par_action):
+            with self.subTest(fonction=fonction.__name__):
+                with (mock.patch.object(Axes, "imshow", autospec=True,
+                                        wraps=Axes.imshow) as images,
+                      mock.patch.object(Figure, "savefig")):
+                    fonction(agent, agent.env, "Bras", "inutilise.png")
+                self.assertEqual(images.call_count, 9)
+
+    def test_meilleure_action_decomposee_par_articulation(self):
+        """Deux cartes : variation de theta1 et de theta2 dans {-1, 0, +1}."""
+        agent = self.agent_9()
+        with (mock.patch.object(Axes, "imshow", autospec=True) as images,
+              mock.patch.object(Figure, "savefig")):
+            graphes.graphe_meilleure_action(agent, agent.env, "Bras", "inutilise.png")
+        self.assertEqual(images.call_count, 2)
+        cartes = [np.asarray(appel.args[1]) for appel in images.call_args_list]
+        for etat in range(agent.env.nb_etats):
+            ligne, colonne = divmod(etat, agent.env.nb_theta2)
+            if agent.visites[etat] > 0 and agent.env.actions_possibles(etat):
+                attendu = agent.env.deplacements[agent.meilleure_action(etat)]
+                self.assertEqual((cartes[0][ligne, colonne], cartes[1][ligne, colonne]),
+                                 attendu)
+            else:
+                self.assertTrue(np.isnan(cartes[0][ligne, colonne]))
+                self.assertTrue(np.isnan(cartes[1][ligne, colonne]))
+
+    def test_suivi_mesure_la_couverture_des_couples(self):
+        config = experience.config_bras("naive", 9, nb_episodes=40, max_pas=12)
+        _, env, bilans = experience.entrainer_avec_suivi(config, 42, pas_evaluation=10,
+                                                         nb_tests=3)
+        couvertures = [b["couples_essayes"] for b in bilans]
+        self.assertEqual(couvertures, sorted(couvertures))
+        self.assertTrue(all(0 < c <= 100 for c in couvertures))
+        self.assertEqual(env.nb_actions, 9)
+
+
+class TestEtudeEpsilon(unittest.TestCase):
+    def test_mesures_et_graphes(self):
+        from experiences import etude_epsilon
+        resultats = etude_epsilon.etudier(modes=("naive",), epsilons=(0.0, 1.0),
+                                          nb_actions=9, nb_episodes=20,
+                                          pas_suivi=10, nb_tests=3)
+        self.assertEqual(set(resultats["naive"]), {"constante", "aleatoire"})
+        for initialisation, series in resultats["naive"].items():
+            with self.subTest(initialisation=initialisation):
+                self.assertEqual([b["episode"] for b in series[0.0]["evaluations"]],
+                                 [10, 20])
+                # epsilon constant : aucune action au hasard, ou uniquement au hasard.
+                self.assertEqual(series[0.0]["final"]["actions_aleatoires"], 0.0)
+                self.assertEqual(series[1.0]["final"]["actions_aleatoires"], 100.0)
+        with mock.patch.object(Figure, "savefig") as enregistrer:
+            graphes.graphe_epsilon_evolution(resultats, "couples_essayes", "y", "t", "a.png")
+            graphes.graphe_epsilon_bilan(resultats, "b.png")
+        self.assertEqual(enregistrer.call_count, 2)
+
+    def test_epsilon_constant_dans_la_configuration(self):
+        from experiences import etude_epsilon
+        config = etude_epsilon.config_epsilon("smart", 0.2, "constante", nb_actions=9)
+        agent, _ = experience.creer_agent(config, 42)
+        self.assertEqual((agent.epsilon, agent.epsilon_min, agent.decroissance),
+                         (0.2, 0.2, 1.0))
+        self.assertTrue((agent.Q == 0).all())
+
+    def test_moyenne_seeds(self):
+        from experiences import etude_epsilon
+        a = {"evaluations": [{"episode": 10, "taux_reussite": 0.0, "couples_essayes": 10.0}],
+             "final": {"taux_reussite": 0.0}}
+        b = {"evaluations": [{"episode": 10, "taux_reussite": 50.0, "couples_essayes": 30.0}],
+             "final": {"taux_reussite": 100.0}}
+        moyenne = etude_epsilon.moyenne_seeds([a, b])
+        self.assertEqual(moyenne["evaluations"][0]["couples_essayes"], 20.0)
+        self.assertEqual(moyenne["final"]["taux_reussite"], 50.0)
 
 
 if __name__ == "__main__":

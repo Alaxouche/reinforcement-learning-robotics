@@ -87,6 +87,62 @@ class TestBrasRobotique(unittest.TestCase):
         with self.assertRaises(ValueError):
             env.reset(etat_depart=-1)
 
+    def test_neuf_actions_mouvements_simultanes(self):
+        env = BrasRobotSmart(nb_actions=9)
+        self.assertEqual(env.nb_actions, 9)
+        self.assertEqual(len(env.noms_actions), 9)
+        self.assertEqual(len(set(env.deplacements)), 9)
+        self.assertEqual(env.actions_possibles(env.etat_initial), list(range(9)))
+
+        theta1, theta2 = env.angles(env.etat_initial)
+        attendus = {4: (10, 10), 5: (10, -10), 6: (-10, 10), 7: (-10, -10), 8: (0, 0)}
+        for action, (d1, d2) in attendus.items():
+            with self.subTest(action=env.noms_actions[action]):
+                env.reset(etat_depart=env.etat_initial)
+                nouvel_etat, _, _ = env.step(action)
+                self.assertEqual(env.angles(nouvel_etat),
+                                 ((theta1 + d1) % 360, (theta2 + d2) % 360))
+
+        # Bouclage modulo 360 sur les deux articulations à la fois.
+        env.reset(etat_depart=env._indices_vers_etat(35, 0))
+        self.assertEqual(env.angles(env.step(5)[0]), (0, 350))
+
+    def test_quatre_premieres_actions_communes(self):
+        quatre, neuf = BrasRobotNaive(), BrasRobotNaive(nb_actions=9)
+        self.assertEqual(quatre.nb_actions, 4)
+        self.assertEqual(neuf.noms_actions[:4], quatre.noms_actions)
+        self.assertEqual(neuf.deplacements[:4], quatre.deplacements)
+        with self.assertRaises(ValueError):
+            BrasRobotNaive(nb_actions=8)
+
+    def test_immobile_penalise_par_chaque_recompense(self):
+        """Rester immobile ne rapproche pas : jamais mieux que 0 hors arrivée."""
+        for mode, classe in CLASSES_BRAS.items():
+            with self.subTest(mode=mode):
+                env = classe(nb_actions=9)
+                env.reset(etat_depart=env.etat_initial)
+                etat, recompense, termine = env.step(8)
+                self.assertEqual(etat, env.etat_initial)
+                self.assertFalse(termine)
+                self.assertLessEqual(recompense, 0.0)
+
+    def test_initialisation_constante_de_q(self):
+        env = BrasRobotNaive(nb_actions=9)
+        etat_aleatoire = np.random.get_state()
+        agent = QLearning(environnement=env, alpha=0.2, gamma=0.95, epsilon=0.0,
+                          epsilon_min=0.0, decroissance=1.0, nb_episodes=1, max_pas=5,
+                          initialisation="constante", valeur_initiale=0.5)
+        self.assertEqual(agent.Q.shape, (1296, 9))
+        self.assertTrue((agent.Q == 0.5).all())
+        # Aucun tirage aléatoire consommé par l'initialisation constante.
+        np.testing.assert_array_equal(etat_aleatoire[1], np.random.get_state()[1])
+        # Égalité : argmax choisit la première action.
+        self.assertEqual(agent.meilleure_action(env.etat_initial), 0)
+        with self.assertRaises(ValueError):
+            QLearning(environnement=env, alpha=0.2, gamma=0.95, epsilon=0.0,
+                      epsilon_min=0.0, decroissance=1.0, nb_episodes=1, max_pas=5,
+                      initialisation="zero")
+
     def test_entrainement_et_evaluation(self):
         np.random.seed(42)
         env = BrasRobotDistance(depart_aleatoire=True, seed=42)

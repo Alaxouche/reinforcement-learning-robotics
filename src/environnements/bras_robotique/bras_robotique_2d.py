@@ -14,14 +14,22 @@ from src.environnements.environnement_discret import EnvironnementDiscret
 class BrasRobotique2D(EnvironnementDiscret):
     """Pilotage de deux articulations avec increments angulaires discrets."""
 
-    noms_actions = (
-        "theta1 +", "theta1 -", "theta2 +", "theta2 -"
-    )
-    _deplacements = ((1, 0), (-1, 0), (0, 1), (0, -1))
+    # 4 actions : une seule articulation bouge à chaque pas.
+    # 9 actions : chaque articulation reçoit -pas, 0 ou +pas, simultanément.
+    # Les quatre premières actions sont identiques dans les deux versions.
+    ACTIONS = {
+        4: (("theta1 +", (1, 0)), ("theta1 -", (-1, 0)),
+            ("theta2 +", (0, 1)), ("theta2 -", (0, -1))),
+        9: (("theta1 +", (1, 0)), ("theta1 -", (-1, 0)),
+            ("theta2 +", (0, 1)), ("theta2 -", (0, -1)),
+            ("theta1 +, theta2 +", (1, 1)), ("theta1 +, theta2 -", (1, -1)),
+            ("theta1 -, theta2 +", (-1, 1)), ("theta1 -, theta2 -", (-1, -1)),
+            ("immobile", (0, 0))),
+    }
 
     def __init__(self, longueurs=(1.0, 1.0), cible=(1.0, 1.0),
                  pas_deg=10, angles_initiaux=(90, 0), tolerance=0.15,
-                 depart_aleatoire=False, seed=None):
+                 depart_aleatoire=False, seed=None, nb_actions=4):
         self.l1, self.l2 = (float(longueurs[0]), float(longueurs[1]))
         self.cible = (float(cible[0]), float(cible[1]))
         self.pas_deg = int(pas_deg)
@@ -36,12 +44,16 @@ class BrasRobotique2D(EnvironnementDiscret):
             raise ValueError("Le pas doit etre un diviseur entier de 360.")
         if self.tolerance <= 0:
             raise ValueError("La tolerance doit etre strictement positive.")
+        if nb_actions not in self.ACTIONS:
+            raise ValueError("nb_actions doit valoir 4 ou 9.")
+        self.noms_actions = tuple(nom for nom, _ in self.ACTIONS[nb_actions])
+        self.deplacements = tuple(d for _, d in self.ACTIONS[nb_actions])
 
         # Angles modulo 360 : 360 degres et 0 degre sont la meme pose.
         self.angles_theta1 = tuple(range(0, 360, self.pas_deg))
         self.angles_theta2 = self.angles_theta1
         self.nb_theta2 = len(self.angles_theta2)
-        super().__init__(len(self.angles_theta1) * self.nb_theta2, 4)
+        super().__init__(len(self.angles_theta1) * self.nb_theta2, nb_actions)
 
         self.etat_initial = self._indices_vers_etat(
             self._indice_angle(self.angles_theta1, angles_initiaux[0]),
@@ -121,7 +133,7 @@ class BrasRobotique2D(EnvironnementDiscret):
         if self.distance_cible(etat) <= self.tolerance:
             return []
         # Aucun mur, aucune butee : rotation circulaire dans les deux sens.
-        return [0, 1, 2, 3]
+        return list(range(self.nb_actions))
 
     @abstractmethod
     def _recompense_transition(self, distance_avant, distance_apres, termine):
@@ -134,7 +146,7 @@ class BrasRobotique2D(EnvironnementDiscret):
 
         distance_avant = self.distance_cible()
         i, j = divmod(self.etat, self.nb_theta2)
-        di, dj = self._deplacements[action]
+        di, dj = self.deplacements[action]
         self.etat = self._indices_vers_etat(
             (i + di) % len(self.angles_theta1),
             (j + dj) % self.nb_theta2

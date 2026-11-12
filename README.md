@@ -17,7 +17,7 @@ reinforcement-learning-robotics/
 │   │   │   ├── labyrinthe_5x5.py
 │   │   │   └── labyrinthe_36x36.py    # grille ouverte générée, 60 pièges
 │   │   └── bras_robotique/
-│   │       ├── bras_robotique_2d.py   # Mécanique commune
+│   │       ├── bras_robotique_2d.py   # Mécanique commune (4 ou 9 actions)
 │   │       ├── bras_robot_naive.py    # +10 / -0.02
 │   │       ├── bras_robot_smart.py    # -d(k+1) + 10 si cible atteinte
 │   │       └── bras_robot_distance.py # d(k) - d(k+1) + 10 si cible atteinte
@@ -28,6 +28,7 @@ reinforcement-learning-robotics/
 ├── experiences/
 │   ├── entrainement.py
 │   ├── entrainement_bras_robotique.py
+│   ├── etude_epsilon.py               # Impact de epsilon, Q initiale constante / aléatoire
 │   ├── graphes.py                     # Génère tous les graphes
 │   └── README_graphes.md
 │
@@ -151,7 +152,7 @@ py -m experiences.entrainement --taille 36  # un seul labyrinthe
 
 Les scripts d'entraînement affichent leurs résultats dans le terminal, sans produire
 d'image. Un seul programme entraîne les deux labyrinthes et les trois modes du
-bras, puis enregistre les graphiques PNG (≈ 2 minutes) :
+bras, à 4 puis à 9 actions, puis enregistre les graphiques PNG (≈ 2 minutes) :
 
 ```bash
 py -m pip install -r requirements.txt
@@ -165,15 +166,22 @@ bleue). Pour les labyrinthes, en plus : écart à la politique optimale depuis
 chaque case (7), et une **comparaison 5 x 5 / 36 x 36**
 (`labyrinthes/comparaison_5x5_36x36.png`).
 
-**Deux graphiques des récompenses du bras** :
+**Deux graphiques des récompenses du bras**, pour 4 et pour 9 actions
+(`bras_robotique/4_actions/` et `bras_robotique/9_actions/`) :
 - taux de réussite de la politique tous les 500 épisodes (mêmes 30 départs) ;
 - longueur des épisodes pendant l'entraînement (moyenne glissante).
 
+Plus une **comparaison 4 / 9 actions** (`bras_robotique/comparaison_4_9_actions.png`).
+L'étude de epsilon a son propre programme (voir
+[Impact de epsilon sur l'exploration](#impact-de-epsilon-sur-lexploration)).
+
 Le graphique de comparaison labyrinthe/bras a été retiré.
 Le graphe 4 affiche des **flèches et un chemin dans le labyrinthe**.
-Pour le bras, il présente **quatre couleurs selon l'action préférée**
+Pour le bras à 4 actions, il présente **quatre couleurs selon l'action préférée**
 (theta1+, theta1-, theta2+, theta2-), sans texte ni chemin superposé ;
-les arrivées sont entourées de cercles.
+les arrivées sont entourées de cercles. À 9 actions, neuf couleurs ne se
+distinguent plus : la meilleure action est décomposée en **deux cartes**, la
+variation choisie pour theta1 et celle pour theta2 (diminue / immobile / augmente).
 
 Les images sont enregistrées dans `experiences/resultats/`.
 Pour interpréter les graphiques :
@@ -194,6 +202,9 @@ y = L1*sin(theta1) + L2*sin(theta1+theta2)
 Les angles sont discrets et independamment libres de tourner sur 360 degres.
 Les quatre actions augmentent ou diminuent l'un des angles de 10 degres
 (par defaut), avec bouclage modulo 360 : 350 + 10 = 0 degre.
+Avec `nb_actions=9`, les deux articulations bougent **en même temps** : chacune
+reçoit -10, 0 ou +10 degrés, soit 3 x 3 = 9 actions (voir
+[Passage à 9 actions](#passage-à-9-actions)).
 Les angles vont de 0 a 350 degres inclus (360 equivaut a 0).
 Cela produit 36 x 36 = 1296 etats, sans contraintes de sol ni de quadrant.
 La cible peut avoir des coordonnees x et y negatives.
@@ -245,6 +256,136 @@ il n'inclut pas la dynamique des moteurs ni les collisions pendant
 la rotation continue entre deux poses. Aucune butee articulaire
 n'est imposee dans cette simulation.
 
+### Passage à 9 actions
+
+Avec 4 actions, une seule articulation bouge à chaque pas. Avec 9 actions,
+chaque articulation reçoit indépendamment -10, 0 ou +10 degrés :
+
+| Action | theta1 | theta2 | Action | theta1 | theta2 |
+|---|---|---|---|---|---|
+| 0 `theta1 +` | +10 | 0 | 5 `theta1 +, theta2 -` | +10 | -10 |
+| 1 `theta1 -` | -10 | 0 | 6 `theta1 -, theta2 +` | -10 | +10 |
+| 2 `theta2 +` | 0 | +10 | 7 `theta1 -, theta2 -` | -10 | -10 |
+| 3 `theta2 -` | 0 | -10 | 8 `immobile` | 0 | 0 |
+| 4 `theta1 +, theta2 +` | +10 | +10 | | | |
+
+Les quatre premières actions sont celles de la version à 4 actions. Le choix
+se fait par `nb_actions=9` dans le constructeur des trois classes de bras
+(4 par défaut). Les états, les récompenses et les hyperparamètres ne changent
+pas ; la Q-table passe de 1296 x 4 à 1296 x 9 (11 646 couples (s, a)
+autorisés au lieu de 5 176). L'action `immobile` ne rapproche jamais de la
+cible : elle coûte `-0.02` (naive), `-d` (smart) ou `0` (distance).
+
+Résultats (graine 42, 5 000 épisodes, mêmes 30 départs de test, sans
+exploration, 50 mouvements maximum) :
+
+| Récompense | 4 actions : réussite | mouvements (réussites) | 9 actions : réussite | mouvements (réussites) |
+|---|---|---|---|---|
+| naive | 96.7 % | 15.0 | 100 % | 11.5 |
+| smart | 66.7 % | 12.6 | 63.3 % | 8.3 |
+| distance | 100 % | 17.1 | 100 % | 12.5 |
+
+- Les mouvements simultanés raccourcissent les trajets de 23 à 34 %. Les deux
+  articulations bougent ensemble dans 55 à 61 % des états non terminaux
+  selon la récompense.
+- La table est 2,25 fois plus grande, donc chaque couple (s, a) est mis à
+  jour moins souvent (≈ 10 fois au lieu de ≈ 27). L'apprentissage n'est
+  pourtant pas plus lent pour naive et distance : les épisodes plus courts
+  propagent plus vite le bonus terminal (`comparaison_4_9_actions.png`).
+- Smart reste vers 65 % : sa limite vient de la récompense, pas du jeu
+  d'actions. L'action `immobile` y devient même un piège : elle est la
+  meilleure action apprise dans 51 états (14 pour naive, aucun pour
+  distance). Rester sur place coûte `-d` à chaque pas, mais un détour qui
+  éloigne d'abord de la cible coûte davantage ; la politique gloutonne peut
+  donc s'arrêter loin de la cible.
+
+### Impact de epsilon sur l'exploration
+
+```bash
+py -m experiences.etude_epsilon                      # 9 actions, graine 42 (≈ 3 minutes)
+py -m experiences.etude_epsilon --seeds 42 43 44     # moyenne sur trois graines
+py -m experiences.etude_epsilon --actions 4 --modes naive distance
+```
+
+Pour isoler l'effet d'epsilon, il reste **constant** pendant tout
+l'entraînement (`epsilon_min = epsilon`, décroissance = 1), pour
+epsilon = 0, 0.05, 0.1, 0.2, 0.5 et 1. Deux initialisations de la Q-table :
+
+- **constante** : `QLearning(..., initialisation="constante", valeur_initiale=0.0)`,
+  Q(s, a) = 0 partout. En cas d'égalité, `argmax` prend l'action de plus
+  petit indice ;
+- **aléatoire** (par défaut) : Q(s, a) uniforme dans [-0.1 ; 0.1].
+
+Tout le reste suit la référence du bras (9 actions, alpha = 0.2,
+gamma = 0.95, 5 000 épisodes, départs aléatoires). Mesures : part des couples
+(s, a) essayés au moins une fois, réussite gloutonne sur les 30 départs de
+test, longueur moyenne des 500 derniers épisodes. Graphes :
+`experiences/resultats/bras_robotique/epsilon/9_actions/`.
+
+Couples (s, a) essayés en fin d'entraînement (graine 42) :
+
+| epsilon | 0 | 0.05 | 0.1 | 0.2 | 0.5 | 1 |
+|---|---|---|---|---|---|---|
+| naive, Q constante | 98.1 % | 99.3 % | 99.3 % | 99.7 % | 100 % | 100 % |
+| naive, Q aléatoire | 45.3 % | 61.4 % | 70.3 % | 84.3 % | 98.9 % | 100 % |
+| smart, Q constante | 98.5 % | 99.4 % | 99.5 % | 99.7 % | 100 % | 100 % |
+| smart, Q aléatoire | 97.2 % | 98.3 % | 98.8 % | 99.4 % | 100 % | 100 % |
+| distance, Q constante | 17.1 % | 34.0 % | 45.0 % | 60.5 % | 89.0 % | 100 % |
+| distance, Q aléatoire | 18.3 % | 36.1 % | 45.8 % | 62.1 % | 91.8 % | 100 % |
+
+Réussite gloutonne (graine 42) :
+
+| epsilon | 0 | 0.05 | 0.1 | 0.2 | 0.5 | 1 |
+|---|---|---|---|---|---|---|
+| naive, Q constante | 93.3 % | 96.7 % | 100 % | 96.7 % | 100 % | 73.3 % |
+| naive, Q aléatoire | 96.7 % | 100 % | 96.7 % | 96.7 % | 100 % | 76.7 % |
+| smart, Q constante | 63.3 % | 66.7 % | 63.3 % | 63.3 % | 63.3 % | 46.7 % |
+| smart, Q aléatoire | 70.0 % | 63.3 % | 60.0 % | 63.3 % | 70.0 % | 53.3 % |
+| distance, Q constante | 80.0 % | 100 % | 100 % | 100 % | 100 % | 100 % |
+| distance, Q aléatoire | 53.3 % | 100 % | 100 % | 100 % | 100 % | 100 % |
+
+Interprétation :
+
+1. **L'exploration ne dépend pas seulement d'epsilon**, mais aussi de la
+   position de la valeur initiale par rapport aux récompenses.
+   Avec naive et smart, toute récompense hors arrivée est négative. Q = 0 est
+   donc **optimiste** : une action essayée passe sous 0, et les actions encore
+   à 0 gagnent l'argmax. L'agent glouton essaie ainsi systématiquement les
+   actions nouvelles : 98 % des couples sont essayés même avec epsilon = 0.
+2. Avec la **Q aléatoire** et naive, la pénalité `-0.02` est faible : après
+   une mise à jour, Q ≈ -0.004 reste au-dessus d'environ la moitié des
+   valeurs initiales tirées dans [-0.1 ; 0.1]. L'optimisme est en partie
+   perdu et la couverture suit epsilon (45 % à 100 %). Avec smart, `-d`
+   vaut -1.8 en moyenne : les deux initialisations restent optimistes (≥ 97 %).
+3. Avec distance, se rapprocher rapporte une récompense **positive** :
+   Q = 0 n'est plus optimiste. L'agent garde la première action qui a
+   rapproché la cible, et seule epsilon fait essayer les autres. La
+   couverture passe de 17-18 % (epsilon = 0) à 100 % (epsilon = 1), quelle que
+   soit l'initialisation. Sans exploration, la réussite tombe à 80 %
+   (constante) ou 53 % (aléatoire) ; epsilon = 0.05 suffit pour 100 %.
+4. **Trop d'exploration coûte cher** : la longueur des épisodes passe
+   de 12 à 17 mouvements (epsilon = 0.05 ou 0.1) à 23-25 (0.5) et 49 (1,
+   presque toujours la limite de 50). Le Q-learning apprend hors politique, donc une
+   politique gloutonne reste apprise à epsilon = 1 (100 % avec distance), mais
+   les récompenses naive et smart en souffrent (73-77 % et 47-53 %) : les
+   marches aléatoires atteignent rarement la cible, et le bonus terminal se
+   propage lentement.
+5. Avec Q constante, l'exploration gloutonne optimiste est **plus rapide**
+   que le hasard au début : après 250 épisodes (naive et smart), 86-88 % des
+   couples sont essayés avec epsilon = 0, contre 62.5 % avec epsilon = 1
+   (`couverture_couples.png`). Le hasard rejoue souvent des couples déjà
+   essayés.
+
+En pratique, une petite exploration (epsilon ≈ 0.05 à 0.2), ou la décroissance
+de 1 vers 0.15 utilisée par les expériences de référence, suffit dès que
+l'initialisation n'est pas optimiste.
+
+Les tableaux reposent sur la graine 42. Moyennées sur les graines 42, 43 et
+44 (`--seeds 42 43 44`), les couvertures restent à moins de 3 points de ces
+valeurs et les cinq constats ci-dessus sont inchangés. Avec distance et
+epsilon = 0, la réussite moyenne est de 84 % (Q constante) contre 47 %
+(Q aléatoire) ; elle est de 100 % pour toutes les graines dès epsilon = 0.05.
+
 ### Tests automatiques du bras
 
 Depuis la racine du dépôt :
@@ -254,28 +395,30 @@ py -m unittest discover -s tests -v
 ```
 
 Les tests vérifient les trois fonctions de récompense, les départs
-aléatoires reproductibles et un petit entraînement sans affichage graphique.
+aléatoires reproductibles, les 9 actions (mouvements simultanés, bouclage,
+action immobile), l'initialisation constante de Q et un petit entraînement
+sans affichage graphique.
 `tests/test_graphes.py` vérifie les compteurs utilisés par les graphes, et que
 les graphes ne modifient pas l'entraînement.
 
 ### Lancer les trois modes du bras
 
 Les trois entraînements (naive, smart, distance) sont exécutés
-automatiquement l'un après l'autre :
+automatiquement l'un après l'autre, à 4 puis à 9 actions :
 
 ```bash
 py -m experiences.entrainement_bras_robotique
 ```
 
-On peut aussi choisir un mode et la seed :
+On peut aussi choisir un mode, le nombre d'actions et la seed :
 
 ```bash
 py -m experiences.entrainement_bras_robotique --mode naive
-py -m experiences.entrainement_bras_robotique --mode smart --seed 42
-py -m experiences.entrainement_bras_robotique --mode distance --seed 42
+py -m experiences.entrainement_bras_robotique --mode smart --actions 9
+py -m experiences.entrainement_bras_robotique --mode distance --actions 4 --seed 42
 ```
 
-Par défaut, `--seed 42`.
+Par défaut, `--seed 42` et `--actions tous` (4 puis 9).
 L'entraînement utilise 5 000 épisodes, `epsilon_min=0.15` et une
 décroissance de `0.9995` pour conserver davantage d'exploration.
 La graine est réappliquée à chaque mode ; le tirage des états de départ

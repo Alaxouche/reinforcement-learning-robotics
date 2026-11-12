@@ -1,7 +1,8 @@
 """Entraînement du bras robotique : comparaison de trois récompenses.
 
 Exécuter depuis la racine du dépôt :
-  py -m experiences.entrainement_bras_robotique
+  py -m experiences.entrainement_bras_robotique              # 4 et 9 actions
+  py -m experiences.entrainement_bras_robotique --actions 9  # mouvements simultanés
 """
 import argparse
 import random
@@ -38,12 +39,12 @@ MODES_BRAS = {
 }
 
 
-def entrainer_mode(mode, seed=42):
+def entrainer_mode(mode, seed=42, nb_actions=4):
     np.random.seed(seed)
     environnement = MODES_BRAS[mode](
         longueurs=(1.0, 1.0), cible=(1.0, 1.0), pas_deg=10,
         angles_initiaux=(90, 0), tolerance=0.15,
-        depart_aleatoire=True, seed=seed
+        depart_aleatoire=True, seed=seed, nb_actions=nb_actions
     )
     algorithme = QLearning(
         environnement=environnement,
@@ -85,8 +86,9 @@ def entrainer_mode(mode, seed=42):
         "distance_finale_moyenne": float(np.mean(distances_finales)),
     }
 
-    print(f"\nBRAS ROBOTIQUE - RÉCOMPENSE {mode.upper()}")
+    print(f"\nBRAS ROBOTIQUE - RÉCOMPENSE {mode.upper()} - {nb_actions} ACTIONS")
     print(f"Seed : {seed}")
+    print(f"Actions : {', '.join(environnement.noms_actions)}")
     print(f"Cible M0 : {environnement.cible}")
     print(f"États discrets : {environnement.nb_etats}")
     print("Départ aléatoire non terminal à chaque épisode d'entraînement.")
@@ -103,16 +105,23 @@ def entrainer_mode(mode, seed=42):
     return algorithme, bilan
 
 
-def main(mode="tous", seed=42):
+def main(mode="tous", seed=42, actions="tous"):
     modes = ("naive", "smart", "distance") if mode == "tous" else (mode,)
+    nombres_actions = (4, 9) if actions == "tous" else (int(actions),)
     resultats = {}
-    for nom in modes:
-        resultats[nom] = entrainer_mode(nom, seed=seed)
+    for nb_actions in nombres_actions:
+        for nom in modes:
+            resultats[(nom, nb_actions)] = entrainer_mode(
+                nom, seed=seed, nb_actions=nb_actions
+            )
     if len(resultats) > 1:
         print("\nCOMPARAISON : MÊME BRAS, MÊMES DÉPARTS DE TEST")
-        for nom in modes:
-            _, bilan = resultats[nom]
-            print(f"{nom:>8}: réussite = {100 * bilan['taux_reussite']:.1f} %, "
+        for (nom, nb_actions), (_, bilan) in resultats.items():
+            moyenne = bilan["moyenne_actions_reussies"]
+            mouvements = f"{moyenne:.1f}" if moyenne is not None else "-"
+            print(f"{nom:>8}, {nb_actions} actions : "
+                  f"réussite = {100 * bilan['taux_reussite']:5.1f} %, "
+                  f"mouvements (réussites) = {mouvements:>5}, "
                   f"distance finale moyenne = {bilan['distance_finale_moyenne']:.4f}")
         print("Les récompenses numériques ne sont pas directement comparables.")
         print("Un seul seed ne suffit pas pour conclure sur le meilleur mode.")
@@ -127,5 +136,9 @@ if __name__ == "__main__":
         "--mode", choices=("naive", "smart", "distance", "tous"), default="tous"
     )
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--actions", choices=("4", "9", "tous"), default="tous",
+        help="4 : une articulation à la fois ; 9 : les deux en même temps."
+    )
     arguments = parser.parse_args()
-    main(mode=arguments.mode, seed=arguments.seed)
+    main(mode=arguments.mode, seed=arguments.seed, actions=arguments.actions)

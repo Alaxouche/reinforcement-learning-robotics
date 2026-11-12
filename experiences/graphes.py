@@ -8,11 +8,13 @@
     comparaison_5x5_36x36.png               (labyrinthes) effet de la taille
     comparaison_reussite_apprentissage.png  taux de réussite, tous les 500 épisodes
     comparaison_longueur_episodes.png       mouvements par épisode pendant l'entraînement
+    comparaison_4_9_actions.png             (bras) une articulation à la fois ou les deux
 
 Les cartes sont écrites dans experiences/resultats/labyrinthes/<taille>/
-(5x5, 36x36) et experiences/resultats/bras_robotique/<mode>/
-(naive, smart, distance). Les comparaisons se trouvent dans
-experiences/resultats/labyrinthes/ et experiences/resultats/bras_robotique/.
+(5x5, 36x36) et experiences/resultats/bras_robotique/<n>_actions/<mode>/
+(4 ou 9 actions ; naive, smart, distance). Les comparaisons des récompenses
+se trouvent dans experiences/resultats/bras_robotique/<n>_actions/, celle des
+4 et 9 actions dans experiences/resultats/bras_robotique/.
 Lancement depuis la racine du projet : py -m experiences.graphes
 """
 
@@ -49,13 +51,29 @@ EXPERIENCES_LABYRINTHES = [
      "nb_episodes": 3000, "max_pas": 1000},
 ]
 
-EXPERIENCES_BRAS = [
-    {"nom": f"Bras robotique ({mode})", "dossier": Path("bras_robotique", mode),
-     "construire": lambda seed, classe=classe: classe(depart_aleatoire=True, seed=seed),
-     "alpha": 0.2, "gamma": 0.95, "epsilon_min": 0.15, "decroissance": 0.9995,
-     "nb_episodes": 5000, "max_pas": 50}
-    for mode, classe in MODES_BRAS.items()
-]
+# 4 actions : une articulation à la fois ; 9 actions : les deux en même temps
+# (chacune -pas, 0 ou +pas). Mêmes hyperparamètres pour comparer.
+NOMBRES_ACTIONS_BRAS = (4, 9)
+
+
+def config_bras(mode, nb_actions=4, **reglages):
+    """Configuration d'un bras ; `reglages` remplace les hyperparamètres par défaut."""
+    classe = MODES_BRAS[mode]
+    config = {
+        "nom": f"Bras robotique ({mode}, {nb_actions} actions)",
+        "dossier": Path("bras_robotique", f"{nb_actions}_actions", mode),
+        "mode": mode, "nb_actions": nb_actions,
+        "construire": lambda seed: classe(depart_aleatoire=True, seed=seed,
+                                          nb_actions=nb_actions),
+        "alpha": 0.2, "gamma": 0.95, "epsilon": 1.0, "epsilon_min": 0.15,
+        "decroissance": 0.9995, "nb_episodes": 5000, "max_pas": 50,
+    }
+    config.update(reglages)
+    return config
+
+
+EXPERIENCES_BRAS = [config_bras(mode, nb_actions)
+                    for nb_actions in NOMBRES_ACTIONS_BRAS for mode in MODES_BRAS]
 
 EXPERIENCES = EXPERIENCES_LABYRINTHES + EXPERIENCES_BRAS
 
@@ -67,11 +85,13 @@ def creer_agent(config, seed):
         environnement=environnement,
         alpha=config["alpha"],
         gamma=config["gamma"],
-        epsilon=1.0,
+        epsilon=config.get("epsilon", 1.0),
         epsilon_min=config["epsilon_min"],
         decroissance=config["decroissance"],
         nb_episodes=config["nb_episodes"],
         max_pas=config["max_pas"],
+        initialisation=config.get("initialisation", "aleatoire"),
+        valeur_initiale=config.get("valeur_initiale", 0.0),
     )
     return algorithme, environnement
 
@@ -131,6 +151,8 @@ def entrainer_avec_suivi(config, seed, pas_evaluation=PAS_EVALUATION,
         environnement.etats_depart,
         k=min(nb_tests, len(environnement.etats_depart)),
     )
+    # Couples (s, a) autorisés : toutes les actions depuis les états non terminaux.
+    couples = len(environnement.etats_depart) * environnement.nb_actions
     total = algorithme.nb_episodes
     historique = {nom: [] for nom in (
         "recompenses", "nombre_actions", "epsilons", "taux_exploration"
@@ -146,6 +168,9 @@ def entrainer_avec_suivi(config, seed, pas_evaluation=PAS_EVALUATION,
 
             bilan = evaluer_politique(algorithme, departs_test)
             bilan["episode"] = debut + algorithme.nb_episodes
+            bilan["couples_essayes"] = (
+                100.0 * np.count_nonzero(algorithme.mises_a_jour) / couples
+            )
             evaluations.append(bilan)
     finally:
         algorithme.nb_episodes = total
@@ -238,17 +263,37 @@ def afficher_comparaison(agents):
     mesures = [graphes.indicateurs(algorithme, environnement)
                for _, algorithme, environnement in agents]
 
+    largeur = max(26, max(len(nom) for nom, _, _ in agents) + 2)
     print("\nComparaison")
-    print(f"{'':<44}" + "".join(f"{nom:>26}" for nom, _, _ in agents))
+    print(f"{'':<44}" + "".join(f"{nom:>{largeur}}" for nom, _, _ in agents))
     for titre, cle, format_valeur in lignes:
-        print(f"{titre:<44}" + "".join(f"{format_valeur.format(m[cle]):>26}" for m in mesures))
+        print(f"{titre:<44}"
+              + "".join(f"{format_valeur.format(m[cle]):>{largeur}}" for m in mesures))
+
+
+def nettoyer_anciens_resultats_bras():
+    """Avant le passage à 4 / 9 actions, les bras étaient rangés dans
+    bras_robotique/<mode>/ et leurs comparaisons dans bras_robotique/."""
+    dossier_bras = DOSSIER_RESULTATS / "bras_robotique"
+    for mode in MODES_BRAS:
+        dossier = dossier_bras / mode
+        for ancien in ("3_cartes_q_brutes.png", "4_meilleure_action.png",
+                       "6_visites.png", "6b_passages_par_action.png"):
+            (dossier / ancien).unlink(missing_ok=True)
+        if dossier.is_dir() and not any(dossier.iterdir()):
+            dossier.rmdir()
+    for ancien in ("comparaison_reussite_apprentissage.png",
+                   "comparaison_longueur_episodes.png",
+                   "comparaison_mouvements_finaux.png"):
+        (dossier_bras / ancien).unlink(missing_ok=True)
 
 
 def main():
     agents = []
-    suivis_bras = {}
-    algorithmes_bras = {}
+    suivis_bras = {n: {} for n in NOMBRES_ACTIONS_BRAS}
+    algorithmes_bras = {n: {} for n in NOMBRES_ACTIONS_BRAS}
     suivis_labyrinthes = {}
+    nettoyer_anciens_resultats_bras()
     # Le graphique de comparaison labyrinthe / bras est retiré.
     (DOSSIER_RESULTATS / "comparaison_labyrinthe_bras.png").unlink(missing_ok=True)
     # Les cartes du 5 x 5 sont désormais rangées dans labyrinthes/5x5/.
@@ -272,9 +317,8 @@ def main():
             algorithme, environnement, evaluations = entrainer_avec_suivi(
                 config, SEED_REFERENCE
             )
-            mode = config["dossier"].parts[1]
-            suivis_bras[mode] = evaluations
-            algorithmes_bras[mode] = algorithme
+            suivis_bras[config["nb_actions"]][config["mode"]] = evaluations
+            algorithmes_bras[config["nb_actions"]][config["mode"]] = algorithme
             print(f"    succès gloutons sur {evaluations[-1]['tests']} départs : "
                   f"{evaluations[-1]['reussites']}/{evaluations[-1]['tests']}")
         else:
@@ -305,16 +349,25 @@ def main():
         print(f"    graphes écrits dans {dossier}")
 
     dossier_bras = DOSSIER_RESULTATS / "bras_robotique"
-    dossier_bras.mkdir(parents=True, exist_ok=True)
-    graphes.graphe_progression_reussite(
-        suivis_bras, dossier_bras / "comparaison_reussite_apprentissage.png"
+    for nb_actions in NOMBRES_ACTIONS_BRAS:
+        dossier = dossier_bras / f"{nb_actions}_actions"
+        dossier.mkdir(parents=True, exist_ok=True)
+        graphes.graphe_progression_reussite(
+            suivis_bras[nb_actions], dossier / "comparaison_reussite_apprentissage.png",
+            titre=f"Bras robotique ({nb_actions} actions) : vitesse d'apprentissage "
+                  "des trois récompenses",
+        )
+        graphes.graphe_longueur_episodes_bras(
+            algorithmes_bras[nb_actions], dossier / "comparaison_longueur_episodes.png",
+            titre=f"Bras robotique ({nb_actions} actions) : longueur des épisodes "
+                  "pendant l'apprentissage",
+        )
+        print(f"\nComparaison des récompenses ({nb_actions} actions) : "
+              f"2 graphiques dans {dossier}")
+    graphes.graphe_comparaison_actions(
+        suivis_bras, algorithmes_bras, dossier_bras / "comparaison_4_9_actions.png"
     )
-    # Élimine aussi le PNG produit localement par les anciennes versions.
-    (dossier_bras / "comparaison_mouvements_finaux.png").unlink(missing_ok=True)
-    graphes.graphe_longueur_episodes_bras(
-        algorithmes_bras, dossier_bras / "comparaison_longueur_episodes.png"
-    )
-    print(f"\nComparaison des récompenses : 2 graphiques dans {dossier_bras}")
+    print(f"Comparaison 4 / 9 actions : {dossier_bras / 'comparaison_4_9_actions.png'}")
 
     dossier_labyrinthes = DOSSIER_RESULTATS / "labyrinthes"
     graphes.graphe_comparaison_labyrinthes(

@@ -23,6 +23,12 @@ from matplotlib.patches import Circle, Patch, Rectangle
 FLECHES_LABYRINTHE = [(0, -0.3), (0, 0.3), (-0.3, 0), (0.3, 0)]
 COULEURS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]  # une couleur par série
 COULEURS_ACTIONS_BRAS = ["#3b82f6", "#f97316", "#22c55e", "#a855f7"]
+# Bras à 9 actions : la meilleure action se décompose en (variation de theta1,
+# variation de theta2), chacune dans {-pas, 0, +pas}. Échelle divergente :
+# rouge = diminue, gris clair = immobile, bleu = augmente.
+COULEURS_VARIATION = ["#e34948", "#f0efec", "#2a78d6"]
+# Valeurs d'epsilon (ordonnées) : dégradé bleu du clair au foncé.
+BLEUS_ORDONNES = ["#86b6ef", "#5598e7", "#2a78d6", "#256abf", "#184f95", "#0d366b"]
 ENCRE = "#0b0b0b"
 ENCRE_SECONDAIRE = "#52514e"
 GRILLE = "#e1e0d9"
@@ -95,6 +101,12 @@ def chemin_glouton(algorithme, environnement, etat=None):
 
 def est_bras(environnement):
     return hasattr(environnement, "angles_theta1")
+
+
+def disposition_actions(nb_actions):
+    """(lignes, colonnes) de sous-graphes : 2 x 2 pour 4 actions, 3 x 3 pour 9."""
+    cote = int(np.ceil(np.sqrt(nb_actions)))
+    return int(np.ceil(nb_actions / cote)), cote
 
 
 def dimensions(environnement):
@@ -294,10 +306,12 @@ def graphe_cartes_q_brutes(algorithme, environnement, nom, fichier):
     else:
         minimum, maximum = 0.0, 1.0
 
-    taille = (11, 10) if petite_grille(environnement) else (13, 12)
-    fig, axes = plt.subplots(2, 2, figsize=taille, layout="constrained")
+    lignes, colonnes = disposition_actions(environnement.nb_actions)
+    taille = (11, 10) if petite_grille(environnement) else (6.5 * colonnes, 6 * lignes)
+    fig, axes = plt.subplots(lignes, colonnes, figsize=taille, layout="constrained",
+                             squeeze=False)
 
-    for action, ax in enumerate(axes.flat):
+    for action, ax in enumerate(axes.flat[:environnement.nb_actions]):
         image = ax.imshow(grilles[action], cmap=BLEUS_Q, vmin=minimum, vmax=maximum)
         preparer_grille(ax, environnement)
         marquer_cases(ax, environnement)
@@ -321,6 +335,10 @@ def graphe_cartes_q_brutes(algorithme, environnement, nom, fichier):
 # ---------------------------------------------------------------------------
 def graphe_meilleure_action(algorithme, environnement, nom, fichier):
     colonnes = dimensions(environnement)[1]
+
+    if est_bras(environnement) and environnement.nb_actions != 4:
+        graphe_meilleure_action_9(algorithme, environnement, nom, fichier)
+        return
 
     if est_bras(environnement):
         # Carte catégorielle : chaque couleur représente une action, pas une Q-value.
@@ -403,6 +421,65 @@ def graphe_meilleure_action(algorithme, environnement, nom, fichier):
     plt.close(fig)
 
 
+def entourer_arrivees_bras(ax, environnement):
+    """Cercles blancs bordés de noir, visibles sur toutes les couleurs."""
+    colonnes = dimensions(environnement)[1]
+    for etat in arrivees(environnement):
+        ligne, colonne = divmod(etat, colonnes)
+        ax.add_patch(Circle((colonne, ligne), radius=0.35, fill=False,
+                            edgecolor=ENCRE, linewidth=4, zorder=5))
+        ax.add_patch(Circle((colonne, ligne), radius=0.35, fill=False,
+                            edgecolor="white", linewidth=2.2, zorder=6))
+
+
+def graphe_meilleure_action_9(algorithme, environnement, nom, fichier):
+    """Bras à 9 actions : deux cartes, une par articulation.
+
+    Neuf couleurs catégorielles ne se distinguent pas ; on décompose donc la
+    meilleure action en (variation de theta1, variation de theta2), chacune
+    codée sur trois niveaux (diminue, immobile, augmente).
+    """
+    colonnes = dimensions(environnement)[1]
+    variations = np.full((2,) + dimensions(environnement), np.nan)
+    nb_simultanees = nb_immobiles = nb_etats = 0
+    for etat in range(environnement.nb_etats):
+        if algorithme.visites[etat] == 0 or not environnement.actions_possibles(etat):
+            continue
+        d1, d2 = environnement.deplacements[algorithme.meilleure_action(etat)]
+        ligne, colonne = divmod(etat, colonnes)
+        variations[:, ligne, colonne] = (d1, d2)
+        nb_etats += 1
+        nb_simultanees += d1 != 0 and d2 != 0
+        nb_immobiles += d1 == 0 and d2 == 0
+
+    couleurs = ListedColormap(COULEURS_VARIATION).with_extremes(bad=SANS_DONNEE)
+    normalisation = BoundaryNorm([-1.5, -0.5, 0.5, 1.5], couleurs.N)
+    fig, axes = plt.subplots(1, 2, figsize=(20, 10.5), layout="constrained")
+    for indice, ax in enumerate(axes):
+        ax.imshow(variations[indice], cmap=couleurs, norm=normalisation,
+                  interpolation="nearest")
+        preparer_grille(ax, environnement)
+        entourer_arrivees_bras(ax, environnement)
+        ax.set_title(f"variation de theta{indice + 1} choisie")
+
+    legendes = [Patch(facecolor=COULEURS_VARIATION[2], label="+pas (augmente)"),
+                Patch(facecolor=COULEURS_VARIATION[1], edgecolor=GRILLE,
+                      label="0 (articulation immobile)"),
+                Patch(facecolor=COULEURS_VARIATION[0], label="-pas (diminue)"),
+                Patch(facecolor=SANS_DONNEE, label="jamais visité / action impossible"),
+                Line2D([], [], linestyle="none", marker="o", markersize=9,
+                       markerfacecolor="none", markeredgecolor=ENCRE,
+                       markeredgewidth=2, label="arrivée")]
+    fig.legend(handles=legendes, loc="outside lower center", ncols=len(legendes))
+    part = (lambda n: 100 * n / nb_etats) if nb_etats else (lambda n: 0.0)
+    fig.suptitle(f"{nom} : meilleure action par configuration angulaire\n"
+                 f"les deux articulations bougent dans {part(nb_simultanees):.0f} % "
+                 f"des états visités, aucune dans {part(nb_immobiles):.0f} %")
+    fig.savefig(fichier, dpi=150)
+    plt.close(fig)
+    return {"etats": nb_etats, "simultanees": nb_simultanees, "immobiles": nb_immobiles}
+
+
 # ---------------------------------------------------------------------------
 # Graphe 6 : nombre de passages par chaque état
 # ---------------------------------------------------------------------------
@@ -453,10 +530,12 @@ def graphe_passages_par_action(algorithme, environnement, nom, fichier):
     maxi = max(float(c.max()) for c in comptages)
     total = algorithme.mises_a_jour.sum()
 
-    taille = (12, 11) if petite_grille(environnement) else (15, 14)
-    fig, axes = plt.subplots(2, 2, figsize=taille, layout="constrained")
-    for action, ax in enumerate(axes.flat):
-        # Même palette bleue et même échelle pour les quatre cartes : comparables.
+    lignes, colonnes = disposition_actions(environnement.nb_actions)
+    taille = (12, 11) if petite_grille(environnement) else (7.5 * colonnes, 7 * lignes)
+    fig, axes = plt.subplots(lignes, colonnes, figsize=taille, layout="constrained",
+                             squeeze=False)
+    for action, ax in enumerate(axes.flat[:environnement.nb_actions]):
+        # Même palette bleue et même échelle pour toutes les cartes : comparables.
         image = afficher_comptages(ax, comptages[action], environnement, maxi)
         part = 100 * comptages[action].sum() / total if total else 0
         ax.set_title(f"{environnement.noms_actions[action]} : "
@@ -501,7 +580,9 @@ def indicateurs(algorithme, environnement):
 # ---------------------------------------------------------------------------
 # Comparaison des récompenses du bras : progression de la réussite
 # ---------------------------------------------------------------------------
-def graphe_progression_reussite(suivis, fichier):
+def graphe_progression_reussite(suivis, fichier,
+                                titre="Bras robotique : vitesse d'apprentissage "
+                                      "des trois récompenses"):
     """Compare le succès glouton à chaque point d'évaluation (mêmes départs)."""
     fig, ax = plt.subplots(figsize=(11, 6), layout="constrained")
     for i, (mode, bilans) in enumerate(suivis.items()):
@@ -519,7 +600,7 @@ def graphe_progression_reussite(suivis, fichier):
     ax.set_ylabel("Taux de réussite (%)")
     ax.grid(True, alpha=0.2)
     ax.legend(title="Récompense", loc="upper left")
-    ax.set_title("Bras robotique : vitesse d'apprentissage des trois récompenses")
+    ax.set_title(titre)
     fig.suptitle(
         f"Politique gloutonne, mêmes {bilans_reference[-1]['tests']} départs de test, "
         f"{bilans_reference[-1]['max_pas']} mouvements maximum par essai",
@@ -704,7 +785,9 @@ def graphe_comparaison_labyrinthes(suivis, fichier):
 # ---------------------------------------------------------------------------
 # Bras : longueur des épisodes pendant l'entraînement (comparable entre récompenses)
 # ---------------------------------------------------------------------------
-def graphe_longueur_episodes_bras(algorithmes, fichier, fenetre=100):
+def graphe_longueur_episodes_bras(algorithmes, fichier, fenetre=100,
+                                  titre="Bras robotique : longueur des épisodes "
+                                        "pendant l'apprentissage"):
     """`algorithmes` : {mode: QLearning}. Les échelles de récompense diffèrent,
     mais le nombre de mouvements par épisode est comparable."""
     fig, ax = plt.subplots(figsize=(11, 6), layout="constrained")
@@ -728,7 +811,132 @@ def graphe_longueur_episodes_bras(algorithmes, fichier, fenetre=100):
     ax.set_ylabel(f"mouvements par épisode (moyenne glissante sur {fenetre})")
     ax.grid(True, alpha=0.2)
     ax.legend(title="Récompense", loc="lower left")
-    ax.set_title("Bras robotique : longueur des épisodes pendant l'apprentissage\n"
-                 "(exploration epsilon-greedy incluse)")
+    ax.set_title(f"{titre}\n(exploration epsilon-greedy incluse)")
+    fig.savefig(fichier, dpi=150)
+    plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+# Bras : 4 actions (une articulation à la fois) contre 9 actions (simultanées)
+# ---------------------------------------------------------------------------
+def graphe_comparaison_actions(suivis, algorithmes, fichier, fenetre=100):
+    """`suivis[nb_actions][mode]` : bilans d'évaluation ; `algorithmes[nb_actions][mode]`.
+
+    Couleur = récompense, trait plein = 4 actions, tirets = 9 actions.
+    """
+    styles = {4: "-", 9: "--"}
+    fig, (ax_reussite, ax_longueur) = plt.subplots(1, 2, figsize=(16, 6.5),
+                                                   layout="constrained")
+    max_pas = 0
+    for nb_actions, suivis_modes in suivis.items():
+        for i, (mode, bilans) in enumerate(suivis_modes.items()):
+            couleur = COULEURS[i % len(COULEURS)]
+            etiquette = f"{mode.capitalize()}, {nb_actions} actions"
+            ax_reussite.plot([b["episode"] for b in bilans],
+                             [b["taux_reussite"] for b in bilans],
+                             linestyle=styles.get(nb_actions, ":"), marker="o",
+                             markersize=5, color=couleur, label=etiquette)
+            algorithme = algorithmes[nb_actions][mode]
+            episodes = np.arange(1, len(algorithme.nombre_actions) + 1)
+            ax_longueur.plot(episodes, moyenne_glissante(algorithme.nombre_actions, fenetre),
+                             linestyle=styles.get(nb_actions, ":"), color=couleur,
+                             label=etiquette)
+            max_pas = max(max_pas, algorithme.max_pas)
+
+    ax_reussite.set_ylim(0, 105)
+    ax_reussite.set_xlabel("Nombre d'épisodes d'entraînement")
+    ax_reussite.set_ylabel("Taux de réussite (%)")
+    ax_reussite.set_title("Réussite de la politique gloutonne (mêmes départs de test)")
+    ax_longueur.axhline(max_pas, color=ENCRE_SECONDAIRE, linewidth=1, linestyle=":")
+    ax_longueur.set_ylim(0, max_pas * 1.08)
+    ax_longueur.set_xlabel("épisode d'entraînement")
+    ax_longueur.set_ylabel(f"mouvements par épisode (moyenne glissante sur {fenetre})")
+    ax_longueur.set_title("Longueur des épisodes (exploration incluse)")
+    for ax in (ax_reussite, ax_longueur):
+        ax.grid(True, alpha=0.2)
+    fig.legend(*ax_reussite.get_legend_handles_labels(), loc="outside lower center",
+               ncols=len(suivis))
+    fig.suptitle("Bras robotique : une articulation à la fois (4 actions) "
+                 "ou les deux en même temps (9 actions)")
+    fig.savefig(fichier, dpi=150)
+    plt.close(fig)
+
+
+# ---------------------------------------------------------------------------
+# Bras : impact d'epsilon sur l'exploration, initialisation constante / aléatoire
+# ---------------------------------------------------------------------------
+NOMS_INITIALISATIONS = {"constante": "Q initiale constante",
+                        "aleatoire": "Q initiale aléatoire"}
+
+
+def graphe_epsilon_evolution(resultats, cle, etiquette_y, titre, fichier):
+    """Une ligne par récompense, une colonne par initialisation, une courbe par epsilon.
+
+    `resultats[mode][initialisation][epsilon]["evaluations"]` : bilans successifs.
+    """
+    modes = list(resultats)
+    initialisations = list(resultats[modes[0]])
+    epsilons = list(resultats[modes[0]][initialisations[0]])
+    fig, axes = plt.subplots(len(modes), len(initialisations),
+                             figsize=(6.5 * len(initialisations), 3.6 * len(modes) + 1),
+                             layout="constrained", sharex=True, sharey=True, squeeze=False)
+    for ligne, mode in enumerate(modes):
+        for colonne, initialisation in enumerate(initialisations):
+            ax = axes[ligne, colonne]
+            for i, epsilon in enumerate(epsilons):
+                bilans = resultats[mode][initialisation][epsilon]["evaluations"]
+                ax.plot([b["episode"] for b in bilans], [b[cle] for b in bilans],
+                        color=BLEUS_ORDONNES[min(i, len(BLEUS_ORDONNES) - 1)],
+                        label=f"epsilon = {epsilon:g}")
+            ax.set_ylim(0, 105)
+            ax.grid(True, alpha=0.2)
+            nom_init = NOMS_INITIALISATIONS.get(initialisation, initialisation)
+            ax.set_title(f"{mode.capitalize()} - {nom_init}")
+            if colonne == 0:
+                ax.set_ylabel(etiquette_y)
+            if ligne == len(modes) - 1:
+                ax.set_xlabel("épisode d'entraînement")
+    fig.legend(*axes[0, 0].get_legend_handles_labels(), loc="outside lower center",
+               ncols=len(epsilons))
+    fig.suptitle(titre)
+    fig.savefig(fichier, dpi=150)
+    plt.close(fig)
+
+
+def graphe_epsilon_bilan(resultats, fichier):
+    """Mesures finales en fonction d'epsilon : une colonne par récompense.
+
+    Lignes : couples (s, a) essayés, réussite gloutonne, longueur des derniers épisodes.
+    Bleu = Q initiale constante, orange = Q initiale aléatoire.
+    """
+    mesures = [("couples_essayes", "couples (s, a) essayés (%)", (0, 105)),
+               ("taux_reussite", "réussite gloutonne (%)", (0, 105)),
+               ("longueur_finale", "mouvements par épisode\n(500 derniers épisodes)", None)]
+    modes = list(resultats)
+    fig, axes = plt.subplots(len(mesures), len(modes),
+                             figsize=(5.5 * len(modes), 3.4 * len(mesures) + 1),
+                             layout="constrained", sharex=True, squeeze=False)
+    for colonne, mode in enumerate(modes):
+        for i, (initialisation, series) in enumerate(resultats[mode].items()):
+            epsilons = list(series)
+            positions = np.arange(len(epsilons))
+            for ligne, (cle, etiquette, limites) in enumerate(mesures):
+                ax = axes[ligne, colonne]
+                ax.plot(positions, [series[e]["final"][cle] for e in epsilons],
+                        marker="o", markersize=7, color=COULEURS[i % len(COULEURS)],
+                        label=NOMS_INITIALISATIONS.get(initialisation, initialisation))
+                ax.set_xticks(positions, [f"{e:g}" for e in epsilons])
+                if limites:
+                    ax.set_ylim(*limites)
+                else:
+                    ax.set_ylim(bottom=0)
+                ax.grid(True, alpha=0.2)
+                if colonne == 0:
+                    ax.set_ylabel(etiquette)
+        axes[0, colonne].set_title(mode.capitalize())
+        axes[-1, colonne].set_xlabel("epsilon (constant pendant tout l'entraînement)")
+    fig.legend(*axes[0, 0].get_legend_handles_labels(), loc="outside lower center",
+               ncols=2)
+    fig.suptitle("Bras robotique : impact d'epsilon sur l'exploration et la politique apprise")
     fig.savefig(fichier, dpi=150)
     plt.close(fig)
