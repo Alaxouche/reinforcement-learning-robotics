@@ -279,10 +279,10 @@ avant de conclure sur les performances comparées de 4 et 9 actions.
 
 ### Impact de epsilon et de la position initiale du bras
 
-L'**initialisation constante ou aléatoire concerne la position du bras**, et non
-les valeurs de la Q-table. Celle-ci est initialisée avec **Q(s, a) = 0 partout**,
-une seule fois au début de chaque entraînement indépendant. Les valeurs de Q
-évoluent normalement d'un épisode à l'autre.
+**Seule la position de depart du bras varie** (fixe ou aleatoire).
+La Q-table commence toujours avec **Q(s, a) = 0 partout**, une seule fois
+au debut de chaque entrainement independant. Les valeurs Q apprises sont
+conservees d'un episode a l'autre.
 
 On compare, avec le **même bras à 9 actions**, la même cible, le même mode
 de récompense et les mêmes hyperparamètres :
@@ -313,7 +313,9 @@ Le taux de réussite reste une mesure de diagnostic dans le terminal,
 sur 30 positions de test et 50 mouvements maximum ; ce n'est ni
 une mesure du chemin le plus court ni une preuve d'optimalité.
 Il faut exécuter le script pour obtenir des résultats : aucune performance
-n'est présumée à l'avance.
+n'est présumée à l'avance. Le script nettoie également les anciens PNG sous
+`experiences/resultats/bras_robotique/epsilon/`, qui comparaient à tort
+les initialisations de Q et peuvent rester sur le disque après un `git pull`.
 
 ### Tests automatiques du bras
 
