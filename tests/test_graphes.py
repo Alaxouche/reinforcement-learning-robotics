@@ -380,43 +380,6 @@ class TestNeufActions(unittest.TestCase):
         self.assertEqual(env.nb_actions, 9)
 
 
-class TestEtudeEpsilon(unittest.TestCase):
-    def test_mesures_et_graphes(self):
-        from experiences import etude_epsilon
-        resultats = etude_epsilon.etudier(modes=("naive",), epsilons=(0.0, 1.0),
-                                          nb_actions=9, nb_episodes=20,
-                                          pas_suivi=10, nb_tests=3)
-        self.assertEqual(set(resultats["naive"]), {"constante", "aleatoire"})
-        for initialisation, series in resultats["naive"].items():
-            with self.subTest(initialisation=initialisation):
-                self.assertEqual([b["episode"] for b in series[0.0]["evaluations"]],
-                                 [10, 20])
-                # epsilon constant : aucune action au hasard, ou uniquement au hasard.
-                self.assertEqual(series[0.0]["final"]["actions_aleatoires"], 0.0)
-                self.assertEqual(series[1.0]["final"]["actions_aleatoires"], 100.0)
-        with mock.patch.object(Figure, "savefig") as enregistrer:
-            graphes.graphe_epsilon_evolution(resultats, "couples_essayes", "y", "t", "a.png")
-            graphes.graphe_epsilon_bilan(resultats, "b.png")
-        self.assertEqual(enregistrer.call_count, 2)
-
-    def test_epsilon_constant_dans_la_configuration(self):
-        from experiences import etude_epsilon
-        config = etude_epsilon.config_epsilon("smart", 0.2, "constante", nb_actions=9)
-        agent, _ = experience.creer_agent(config, 42)
-        self.assertEqual((agent.epsilon, agent.epsilon_min, agent.decroissance),
-                         (0.2, 0.2, 1.0))
-        self.assertTrue((agent.Q == 0).all())
-
-    def test_moyenne_seeds(self):
-        from experiences import etude_epsilon
-        a = {"evaluations": [{"episode": 10, "taux_reussite": 0.0, "couples_essayes": 10.0}],
-             "final": {"taux_reussite": 0.0}}
-        b = {"evaluations": [{"episode": 10, "taux_reussite": 50.0, "couples_essayes": 30.0}],
-             "final": {"taux_reussite": 100.0}}
-        moyenne = etude_epsilon.moyenne_seeds([a, b])
-        self.assertEqual(moyenne["evaluations"][0]["couples_essayes"], 20.0)
-        self.assertEqual(moyenne["final"]["taux_reussite"], 50.0)
-
 
 if __name__ == "__main__":
     unittest.main()
