@@ -341,22 +341,40 @@ L'animation interpole simplement les rotations de 10° entre états :
 **ce n'est pas un double pendule libre avec gravité et inertie**.
 
 ```powershell
-# Bras à 9 actions, récompense distance, 5 000 épisodes : fenêtre animée
+# Lance le menu interactif dans le terminal
 py -m experiences.animation_bras
 
-# Comparaison avec 4 actions ou récompense naive
-py -m experiences.animation_bras --actions 4 --mode naive
+# Sauter le menu, utiliser les paramètres fournis
+py -m experiences.animation_bras --actions 4 --mode naive --angles 120 60
 
 # Autre position de départ, tirée aléatoirement après l'entraînement
 py -m experiences.animation_bras --depart aleatoire
 
-# Exporter une animation GIF, sans fenêtre
+# Exporter une animation GIF, sans fenêtre (pas de menu)
 py -m experiences.animation_bras --gif --sans-fenetre
+
+# Afficher le menu même si d'autres options sont données (ex. GIF)
+py -m experiences.animation_bras --menu --gif --sans-fenetre
 
 # Conserver la Q-table entraînée pour la rejouer sans réentraîner
 py -m experiences.animation_bras --enregistrer-q experiences/resultats/bras_robotique/q_distance_9.npy
 py -m experiences.animation_bras --charger-q experiences/resultats/bras_robotique/q_distance_9.npy --angles 120 60
 ```
+
+Au démarrage **sans arguments**, le terminal demande trois choix :
+1. **4 ou 9 actions** ;
+2. **récompense** (`naive`, `smart`, `distance`) ;
+3. **départ** : pose habituelle (90°, 0°), aléatoire, ou angles personnalisés.
+
+Les deux angles personnalisés sont saisis en degrés, de 0 à 350, par
+multiples de 10 (ce sont les états discrets du Q-learning). Les angles qui
+placent déjà l'effecteur dans la zone cible sont rejetés. Appuyer sur
+**Entrée** accepte le choix proposé. Pour ne pas afficher de menu, spécifier
+les options en ligne de commande ou utiliser `--sans-menu`.
+
+Le choix du départ détermine **uniquement la position initiale de la
+démonstration**. L'entraînement continue d'utiliser des départs aléatoires
+à chaque épisode, comme dans nos autres expériences.
 
 Par défaut : cible (1, 1), segments de longueur 1, angles initiaux
 (90°, 0°), 9 actions, `distance`, graine 42. La sortie indique si la
