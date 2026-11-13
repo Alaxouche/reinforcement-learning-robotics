@@ -19,7 +19,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from experiences.graphes import (config_bras, entrainer_avec_suivi, creer_agent,
-                                nettoyer_anciens_graphes_epsilon, DOSSIER_RESULTATS)
+                                nettoyer_anciens_graphes_epsilon,
+                                nettoyer_anciens_courbes_bras, DOSSIER_RESULTATS)
 
 
 DECROISSANCES = {"rapide": 0.99, "moyenne": 0.997, "lente": 0.9995}
@@ -166,6 +167,7 @@ def main():
 
     # Supprime les anciennes figures "Q initiale constante / aleatoire".
     nettoyer_anciens_graphes_epsilon()
+    nettoyer_anciens_courbes_bras()
     resultats = etudier(
         mode=args.mode, nb_actions=args.actions, profils=tuple(args.profils),
         seeds=tuple(args.seeds), nb_episodes=args.episodes,
