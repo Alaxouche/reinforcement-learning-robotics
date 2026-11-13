@@ -15,9 +15,6 @@ Il enregistre des PNG dans :
 - `experiences/resultats/labyrinthes/comparaison_5x5_36x36.png`
 - `experiences/resultats/bras_robotique/<n>_actions/naive/`, `.../smart/`, `.../distance/`
   (`<n>` = 4 ou 9)
-- `experiences/resultats/bras_robotique/<n>_actions/comparaison_reussite_apprentissage.png`
-- `experiences/resultats/bras_robotique/<n>_actions/comparaison_longueur_episodes.png`
-- `experiences/resultats/bras_robotique/comparaison_4_9_actions.png`
 
 Les anciens fichiers `1_convergence.png`, `2_epsilon_seeds.png`,
 `5_cartes_q.png`, `5b_carte_valeurs.png`, `7_carte_epsilon.png`,
@@ -25,8 +22,10 @@ Les anciens fichiers `1_convergence.png`, `2_epsilon_seeds.png`,
 lors de la prochaine génération : ils ne font plus partie de l'analyse.
 Le PNG `comparaison_mouvements_finaux.png` (ancien boxplot) est également
 supprimé automatiquement lors de la prochaine exécution, ainsi que les cartes
-rangées dans les anciens dossiers `bras_robotique/<mode>/` et les comparaisons
-placées directement dans `bras_robotique/` avant le passage à 4 / 9 actions.
+rangées dans les anciens dossiers `bras_robotique/<mode>/`.
+Les anciens graphiques comparant réussite et mouvements des trois récompenses
+et leur comparaison 4/9 actions ne sont plus générés ; les PNG locaux
+correspondants sont effacés automatiquement.
 
 ## Graphiques conservés
 
@@ -38,13 +37,10 @@ placées directement dans `bras_robotique/` avant le passage à 4 / 9 actions.
 | `6b_passages_par_action.png` | Une carte par action (haut/bas/gauche/droite ; pour le bras theta1±, theta2±, plus les quatre combinaisons et l'action immobile à 9 actions, sur la grille des couples (theta1, theta2)) : nombre de fois où l'action a été jouée depuis chaque case. Même palette bleue et même échelle log pour comparer toutes les cartes |
 | `7_ecart_optimal.png` | (labyrinthes) Si l'agent partait de chaque case et suivait sa politique apprise : bleu très clair = chemin optimal, bleu plus foncé = arrivée atteinte avec détour, orange pâle = la politique tourne en rond (case peu apprise). Le trait noir est le chemin appris depuis S. L'optimum est calculé exactement (Dijkstra sur les récompenses) |
 | `comparaison_5x5_36x36.png` | Longueur des épisodes / plus court chemin, % de cases menant à l'arrivée, % de cases avec chemin optimal, et chemin depuis S, en fonction de la progression de l'entraînement (%) |
-| `comparaison_longueur_episodes.png` | Bras : mouvements par épisode pendant l'entraînement (moyenne glissante sur 100), comparable entre récompenses |
-| `comparaison_reussite_apprentissage.png` | Trois courbes de taux de réussite, tous les 500 épisodes, sur les mêmes 30 départs |
-| `comparaison_4_9_actions.png` | Bras : réussite et longueur des épisodes, couleur = récompense, trait plein = 4 actions, tirets = 9 actions |
 
-Les graphes 3, 4, 6 et 6b sont créés pour chaque environnement, le 7 pour les
-labyrinthes. Les graphiques `comparaison_*` du bras comparent
-**uniquement les trois récompenses du bras robotique**.
+Les graphes 3, 4, 6 et 6b sont créés pour chaque environnement, le 7 pour
+les labyrinthes. Les courbes de réussite et de mouvements par épisode du bras
+ont été supprimées.
 
 **Pourquoi des cases orange dans `7_ecart_optimal.png` du 36×36 ?** L'agent
 commence toujours en S. Une fois epsilon faible, il ne parcourt presque plus
@@ -100,21 +96,6 @@ immobile. Le titre indique la part des états visités pour chacun de ces cas.
 pour rendre visibles les écarts de comptage entre les états peu et très
 fréquentés. Le gris indique un état jamais visité. Les visites
 comptent aussi l'état initial de chaque épisode.
-
-## Comparer les trois récompenses du bras
-
-**Progression du taux de réussite :** les bras sont entraînés 5 000 épisodes.
-Après chaque bloc de 500 épisodes, chacun est évalué **sans exploration**
-sur les **mêmes 30 états initiaux non terminaux**, choisis une seule fois
-avec une graine fixe (`42 + 10 000`). Chaque essai est limité à 50 mouvements.
-La courbe mesure le pourcentage de départs ayant atteint la cible.
-Les 10 points de chaque courbe correspondent aux épisodes 500, 1 000, ...
-5 000 ; ce ne sont **pas des moyennes glissantes**.
-
-Les évaluations sont déterministes : aucune exploration, aucun tirage
-aléatoire, aucune mise à jour des Q-values ni des compteurs. Elles
-n'interrompent pas réellement la continuité de l'apprentissage :
-Q, epsilon et générateurs aléatoires sont conservés entre blocs.
 
 ## Étude epsilon et départ du bras
 
