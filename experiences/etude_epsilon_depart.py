@@ -98,34 +98,33 @@ def etudier(mode="distance", nb_actions=9, profils=tuple(DECROISSANCES),
 
 
 def tracer(resultats, dossier):
-    """Quatre figures séparées ; ne représente jamais de résultats fictifs."""
+    """Trois figures : couverture, evolution d'epsilon, exploration effective."""
     dossier = Path(dossier)
     dossier.mkdir(parents=True, exist_ok=True)
-    for cle, titre, fichier in (
-        ("couples_essayes", "Couverture des couples (etat, action)", "couverture.png"),
-        ("taux_reussite", "Reussite de la politique gloutonne sans exploration", "reussite.png"),
-    ):
-        fig, axes = plt.subplots(1, 2, figsize=(12, 4.5), sharey=True,
-                                 layout="constrained")
-        for ax, depart in zip(axes, DEPARTS):
-            for profil, donnees in resultats[depart].items():
-                points = donnees["evaluations"]
-                x = np.array([p["episode"] for p in points])
-                y = np.array([p[cle] for p in points])
-                std = np.array([p[cle + "_std"] for p in points])
-                ligne, = ax.plot(x, y, label=profil)
-                ax.fill_between(x, np.clip(y - std, 0, 100),
-                                np.clip(y + std, 0, 100),
-                                color=ligne.get_color(), alpha=0.15)
-            ax.set_title("Depart " + depart)
-            ax.set_xlabel("Episodes")
-            ax.grid(alpha=0.25)
-            ax.set_ylim(0, 105)
-        axes[0].set_ylabel("Pourcentage (%)")
-        axes[1].legend(title="Decroissance")
-        fig.suptitle(titre + " (moyenne ± ecart-type entre graines)")
-        fig.savefig(dossier / fichier, dpi=150)
-        plt.close(fig)
+    # Supprime aussi le graphique de réussite généré par une ancienne version.
+    (dossier / "reussite.png").unlink(missing_ok=True)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.5), sharey=True,
+                             layout="constrained")
+    for ax, depart in zip(axes, DEPARTS):
+        for profil, donnees in resultats[depart].items():
+            points = donnees["evaluations"]
+            x = np.array([p["episode"] for p in points])
+            y = np.array([p["couples_essayes"] for p in points])
+            std = np.array([p["couples_essayes_std"] for p in points])
+            ligne, = ax.plot(x, y, label=profil)
+            ax.fill_between(x, np.clip(y - std, 0, 100),
+                            np.clip(y + std, 0, 100),
+                            color=ligne.get_color(), alpha=0.15)
+        ax.set_title("Depart " + depart)
+        ax.set_xlabel("Episodes")
+        ax.grid(alpha=0.25)
+        ax.set_ylim(0, 105)
+    axes[0].set_ylabel("Couples (etat, action) essayes (%)")
+    axes[1].legend(title="Decroissance")
+    fig.suptitle("Couverture des couples (etat, action) (moyenne ± ecart-type)")
+    fig.savefig(dossier / "couverture.png", dpi=150)
+    plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(8, 4.5), layout="constrained")
     for profil, donnees in resultats["fixe"].items():
