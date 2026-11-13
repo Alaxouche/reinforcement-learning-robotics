@@ -372,6 +372,29 @@ class TestNeufActions(unittest.TestCase):
 
 
 
+class TestNettoyageAnciennesFigures(unittest.TestCase):
+    def test_anciens_graphes_q_initiale_supprimes_sans_touch_aux_autres(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as temporaire:
+            racine = Path(temporaire)
+            ancien = racine / "bras_robotique" / "epsilon"
+            for actions in ("4_actions", "9_actions"):
+                dossier = ancien / actions
+                dossier.mkdir(parents=True)
+                for nom in ("couverture_couples.png", "reussite.png", "bilan_epsilon.png"):
+                    (dossier / nom).write_bytes(b"ancien graphique")
+            nouveau = racine / "bras_robotique" / "epsilon_depart" / "9_actions"
+            nouveau.mkdir(parents=True)
+            (nouveau / "couverture.png").write_bytes(b"nouveau graphique")
+            with mock.patch.object(experience, "DOSSIER_RESULTATS", racine):
+                experience.nettoyer_anciens_graphes_epsilon()
+                experience.nettoyer_anciens_graphes_epsilon()
+            self.assertFalse(ancien.exists())
+            self.assertTrue((nouveau / "couverture.png").exists())
+
+
 class TestExplorationEpsilonDepart(unittest.TestCase):
     def test_impact_epsilon_et_positions_initiales(self):
         from experiences import etude_epsilon_depart
