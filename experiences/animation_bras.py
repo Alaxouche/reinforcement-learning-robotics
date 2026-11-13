@@ -1,7 +1,7 @@
 """Anime le bras 2D en suivant EXCLUSIVEMENT la Q-table apprise.
 
 Depuis la racine du dépôt :
-    py -m experiences.animation_bras
+    py -m experiences.animation_bras   # menu interactif : actions, reward, depart
     py -m experiences.animation_bras --mode naive --actions 4
     py -m experiences.animation_bras --gif
     py -m experiences.animation_bras --charger-q experiences/resultats/bras_robotique/q_distance_9.npy
@@ -13,6 +13,7 @@ pendule physique libre : le modèle actuel ne contient ni gravité, ni inertie.
 import argparse
 import math
 import random
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -225,11 +226,105 @@ def animer(agent, etats, actions, reussi, raison, fps=24,
     return animation
 
 
+def demander_choix(titre, options, defaut):
+    """Demande un choix numéroté dans le terminal, avec validation."""
+    while True:
+        print(f"\n{titre}")
+        for numero, (nom, _) in options.items():
+            print(f"  {numero}. {nom}")
+        try:
+            saisie = input(f"Votre choix [{defaut}] : ").strip()
+        except (EOFError, KeyboardInterrupt) as erreur:
+            raise SystemExit("\nConfiguration annulée.") from erreur
+
+        choix = saisie or defaut
+        if choix in options:
+            return options[choix][1]
+        print("Choix invalide. Saisissez l'un des numéros affichés.")
+
+
+def demander_angle(nom, valeur_defaut):
+    """Lit un angle appartenant à la grille 0°, 10°, ..., 350°."""
+    while True:
+        try:
+            texte = input(f"{nom} en degrés (0 à 350, multiple de 10) "
+                          f"[{valeur_defaut}] : ").strip()
+        except (EOFError, KeyboardInterrupt) as erreur:
+            raise SystemExit("\nConfiguration annulée.") from erreur
+        try:
+            angle = int(texte) if texte else valeur_defaut
+        except ValueError:
+            print("Entrée invalide : il faut un nombre entier.")
+            continue
+        if 0 <= angle < 360 and angle % 10 == 0:
+            return angle
+        print("Angle invalide : choisir 0, 10, 20, ..., 350 degrés.")
+
+
+def menu_interactif():
+    """Choisit les paramètres du rejeu avant d'entraîner ou charger la Q-table.
+
+    Le point de départ est un couple d'angles (theta1, theta2), car c'est
+    la représentation des états utilisée par notre Q-learning.
+    """
+    print("\n" + "=" * 56)
+    print(" SIMULATION DU BRAS ROBOTIQUE — PILOTAGE PAR Q-LEARNING")
+    print("=" * 56)
+    nb_actions = demander_choix(
+        "1) Nombre d'actions du bras",
+        {"1": ("4 actions (une articulation à la fois)", 4),
+         "2": ("9 actions (déplacements simultanés possibles)", 9)},
+        "2",
+    )
+    mode = demander_choix(
+        "2) Fonction de récompense",
+        {"1": ("Naive", "naive"),
+         "2": ("Smart", "smart"),
+         "3": ("Distance", "distance")},
+        "3",
+    )
+    depart = demander_choix(
+        "3) Position de départ du bras",
+        {"1": ("Position habituelle (90°, 0°)", "fixe"),
+         "2": ("Position aléatoire", "aleatoire"),
+         "3": ("Choisir les angles theta1 et theta2", "personnalise")},
+        "1",
+    )
+
+    angles = None
+    if depart == "personnalise":
+        env = MODES_BRAS[mode](nb_actions=nb_actions)
+        while True:
+            print("\nLa position du bras est définie par ses deux angles.")
+            theta1 = demander_angle("Theta1 (segment 1)", 90)
+            theta2 = demander_angle("Theta2 (relatif au segment 1)", 0)
+            try:
+                position_depart(env, angles=(theta1, theta2))
+            except ValueError as erreur:
+                print(f"Position impossible : {erreur}")
+                print("Veuillez choisir une autre configuration.")
+                continue
+            angles = (theta1, theta2)
+            break
+        depart = "fixe"
+
+    description_depart = ("aléatoire" if depart == "aleatoire"
+                          else f"angles {angles}" if angles is not None
+                          else "angles (90, 0)")
+    print(f"\nConfiguration : {nb_actions} actions | récompense {mode} "
+          f"| départ {description_depart}")
+    return mode, nb_actions, depart, angles
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Animer le bras contrôlé par la Q-table apprise (sans exploration).")
     parser.add_argument("--mode", choices=tuple(MODES_BRAS), default="distance")
     parser.add_argument("--actions", type=int, choices=(4, 9), default=9)
+    parser.add_argument("--menu", action="store_true",
+                        help="Afficher le menu de choix, même avec des arguments CLI.")
+    parser.add_argument("--sans-menu", action="store_true",
+                        help="Garder les valeurs CLI/par défaut sans demander de choix.")
     parser.add_argument("--episodes", type=int, default=5000)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--depart", choices=("fixe", "aleatoire"), default="fixe")
@@ -243,6 +338,19 @@ def main():
     parser.add_argument("--fps", type=int, default=24)
     parser.add_argument("--images-par-action", type=int, default=7)
     args = parser.parse_args()
+    if args.menu and args.sans_menu:
+        parser.error("--menu et --sans-menu ne peuvent pas être combinés.")
+
+    # Sans argument, un terminal interactif ouvre le menu automatiquement.
+    # Avec des options CLI explicites, on conserve le comportement scriptable.
+    interactif = args.menu or (
+        len(sys.argv) == 1 and sys.stdin.isatty() and not args.sans_menu
+    )
+    if interactif:
+        if args.angles is not None or args.depart != "fixe":
+            parser.error("Avec --menu, choisissez le départ dans le menu "
+                         "et n'utilisez ni --angles ni --depart.")
+        args.mode, args.actions, args.depart, args.angles = menu_interactif()
 
     print("Q-table : chargement existant." if args.charger_q else
           f"Q-table : entraînement de {args.episodes} épisodes...")
@@ -250,7 +358,10 @@ def main():
                         args.charger_q, args.enregistrer_q)
     depart = position_depart(agent.env, args.depart, args.angles, args.seed)
     etats, actions, reussi, raison = trajectoire_q(agent, depart)
-    print(f"Départ : {agent.env.angles(depart)} | Mouvements : {len(actions)} | {raison}")
+    x, y = agent.env.positions(depart)[-1]
+    print(f"Départ : angles {agent.env.angles(depart)}, "
+          f"extrémité M=({x:.3f}, {y:.3f})")
+    print(f"Politique Q : {len(actions)} mouvements | {raison}")
     if args.gif == "auto":
         gif = (Path("experiences/resultats/bras_robotique/animations")
                / f"bras_{args.mode}_{args.actions}_actions.gif")
