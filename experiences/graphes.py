@@ -85,13 +85,11 @@ def creer_agent(config, seed):
         environnement=environnement,
         alpha=config["alpha"],
         gamma=config["gamma"],
-        epsilon=config.get("epsilon", 1.0),
+        epsilon=1.0,
         epsilon_min=config["epsilon_min"],
         decroissance=config["decroissance"],
         nb_episodes=config["nb_episodes"],
         max_pas=config["max_pas"],
-        initialisation=config.get("initialisation", "aleatoire"),
-        valeur_initiale=config.get("valeur_initiale", 0.0),
     )
     return algorithme, environnement
 
