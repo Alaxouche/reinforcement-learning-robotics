@@ -29,6 +29,7 @@ reinforcement-learning-robotics/
 │   ├── entrainement.py
 │   ├── entrainement_bras_robotique.py
 │   ├── graphes.py                     # Génère tous les graphes
+│   ├── etude_epsilon_depart.py        # Epsilon et position de depart du bras
 │   └── README_graphes.md
 │
 ├── tests/
@@ -272,28 +273,45 @@ pas ; la Q-table passe de 1296 x 4 à 1296 x 9 (11 646 couples (s, a)
 autorisés au lieu de 5 176). L'action `immobile` ne rapproche jamais de la
 cible : elle coûte `-0.02` (naive), `-d` (smart) ou `0` (distance).
 
-Résultats (graine 42, 5 000 épisodes, mêmes 30 départs de test, sans
-exploration, 50 mouvements maximum) :
+**Résultats précédents obsolètes :** la Q-table est désormais initialisée à zéro
+pour toutes les expériences. Il faut relancer les entraînements et les graphes
+avant de conclure sur les performances comparées de 4 et 9 actions.
 
-| Récompense | 4 actions : réussite | mouvements (réussites) | 9 actions : réussite | mouvements (réussites) |
-|---|---|---|---|---|
-| naive | 96.7 % | 15.0 | 100 % | 11.5 |
-| smart | 66.7 % | 12.6 | 63.3 % | 8.3 |
-| distance | 100 % | 17.1 | 100 % | 12.5 |
+### Impact de epsilon et de la position initiale du bras
 
-- Les mouvements simultanés raccourcissent les trajets de 23 à 34 %. Les deux
-  articulations bougent ensemble dans 55 à 61 % des états non terminaux
-  selon la récompense.
-- La table est 2,25 fois plus grande, donc chaque couple (s, a) est mis à
-  jour moins souvent (≈ 10 fois au lieu de ≈ 27). L'apprentissage n'est
-  pourtant pas plus lent pour naive et distance : les épisodes plus courts
-  propagent plus vite le bonus terminal (`comparaison_4_9_actions.png`).
-- Smart reste vers 65 % : sa limite vient de la récompense, pas du jeu
-  d'actions. L'action `immobile` y devient même un piège : elle est la
-  meilleure action apprise dans 51 états (14 pour naive, aucun pour
-  distance). Rester sur place coûte `-d` à chaque pas, mais un détour qui
-  éloigne d'abord de la cible coûte davantage ; la politique gloutonne peut
-  donc s'arrêter loin de la cible.
+L'**initialisation constante ou aléatoire concerne la position du bras**, et non
+les valeurs de la Q-table. Celle-ci est initialisée avec **Q(s, a) = 0 partout**,
+une seule fois au début de chaque entraînement indépendant. Les valeurs de Q
+évoluent normalement d'un épisode à l'autre.
+
+On compare, avec le **même bras à 9 actions**, la même cible, le même mode
+de récompense et les mêmes hyperparamètres :
+
+- **Position fixe** : (theta1, theta2) = (90°, 0°) à chaque épisode ;
+- **Position aléatoire** : un départ tiré parmi les états non terminaux à chaque épisode.
+
+Dans les deux cas, epsilon vaut initialement 1 et décroît selon
+epsilon_{n+1} = max(0.05, epsilon_n * facteur), avec trois facteurs :
+0.99 (rapide), 0.997 (moyen), 0.9995 (lent).
+Ce protocole permet de comparer la couverture des couples (état, action)
+et les performances de la politique gloutonne, évaluée **sans exploration**
+sur les mêmes 30 départs de test par graine aléatoire.
+
+```bash
+py -m experiences.etude_epsilon_depart
+# Essai rapide sur un nombre réduit d'épisodes :
+py -m experiences.etude_epsilon_depart --episodes 200 --seeds 42
+# Autre fonction de récompense ou bras à 4 actions :
+py -m experiences.etude_epsilon_depart --mode naive --actions 4
+```
+
+Par défaut, l'étude emploie la récompense `distance`, 9 actions, 5 000 épisodes
+par entraînement et les graines 42, 43, 44. Les quatre graphes sont écrits sous
+`experiences/resultats/bras_robotique/epsilon_depart/9_actions/distance/` :
+`reussite.png`, `couverture.png`, `epsilon.png` et
+`exploration_effective.png`.
+Il faut exécuter le script pour obtenir des résultats : aucune performance
+n'est présumée à l'avance.
 
 ### Tests automatiques du bras
 
