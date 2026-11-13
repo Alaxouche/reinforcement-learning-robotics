@@ -309,9 +309,9 @@ Par défaut, l'étude emploie la récompense `distance`, 9 actions, 5 000 épiso
 par entraînement et les graines 42, 43, 44. Les trois graphes sont écrits sous
 `experiences/resultats/bras_robotique/epsilon_depart/9_actions/distance/` :
 `couverture.png`, `epsilon.png` et `exploration_effective.png`.
-Le taux de réussite reste une mesure de diagnostic dans le terminal,
-sur 30 positions de test et 50 mouvements maximum ; ce n'est ni
-une mesure du chemin le plus court ni une preuve d'optimalité.
+Le taux de réussite reste calculé en interne sur 30 positions de test et
+50 mouvements maximum, mais n'est plus affiché dans le terminal ni tracé.
+Ce taux ne mesure ni le chemin le plus court ni l'optimalité.
 Il faut exécuter le script pour obtenir des résultats : aucune performance
 n'est présumée à l'avance. Le script nettoie également les anciens PNG sous
 `experiences/resultats/bras_robotique/epsilon/`, qui comparaient à tort
