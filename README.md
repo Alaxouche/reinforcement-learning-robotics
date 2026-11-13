@@ -31,7 +31,6 @@ reinforcement-learning-robotics/
 │   ├── graphes.py                     # Génère tous les graphes
 │   ├── etude_epsilon_depart.py        # Epsilon et position de depart du bras
 │   ├── animation_bras.py              # Animation 2D à partir de la Q-table apprise
-│   ├── visualisation_bras.py          # Fenêtre simple : bras animé selon le modèle
 │   └── README_graphes.md
 │
 ├── tests/
@@ -383,12 +382,6 @@ politique atteint la cible, boucle ou dépasse 50 mouvements. Aucun calcul
 de Q-learning n'est effectué pendant le rejeu ; la Q-table n'est jamais
 modifiée par l'animation. Les fichiers GIF sont écrits sous
 `experiences/resultats/bras_robotique/animations/`.
-
-### Fenêtre simple du bras animé
-
-```powershell
-py -m experiences.visualisation_bras distance   # ou smart, naive
-```
 
 ### Lancer les trois modes du bras
 
