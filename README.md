@@ -306,10 +306,12 @@ py -m experiences.etude_epsilon_depart --mode naive --actions 4
 ```
 
 Par défaut, l'étude emploie la récompense `distance`, 9 actions, 5 000 épisodes
-par entraînement et les graines 42, 43, 44. Les quatre graphes sont écrits sous
+par entraînement et les graines 42, 43, 44. Les trois graphes sont écrits sous
 `experiences/resultats/bras_robotique/epsilon_depart/9_actions/distance/` :
-`reussite.png`, `couverture.png`, `epsilon.png` et
-`exploration_effective.png`.
+`couverture.png`, `epsilon.png` et `exploration_effective.png`.
+Le taux de réussite reste une mesure de diagnostic dans le terminal,
+sur 30 positions de test et 50 mouvements maximum ; ce n'est ni
+une mesure du chemin le plus court ni une preuve d'optimalité.
 Il faut exécuter le script pour obtenir des résultats : aucune performance
 n'est présumée à l'avance.
 
