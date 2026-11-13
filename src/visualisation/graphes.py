@@ -576,39 +576,6 @@ def indicateurs(algorithme, environnement):
 
 
 # ---------------------------------------------------------------------------
-# Comparaison des récompenses du bras : progression de la réussite
-# ---------------------------------------------------------------------------
-def graphe_progression_reussite(suivis, fichier,
-                                titre="Bras robotique : vitesse d'apprentissage "
-                                      "des trois récompenses"):
-    """Compare le succès glouton à chaque point d'évaluation (mêmes départs)."""
-    fig, ax = plt.subplots(figsize=(11, 6), layout="constrained")
-    for i, (mode, bilans) in enumerate(suivis.items()):
-        episodes = [bilan["episode"] for bilan in bilans]
-        taux = [bilan["taux_reussite"] for bilan in bilans]
-        ax.plot(episodes, taux, marker="o", markersize=5, linewidth=2.2,
-                label=mode.capitalize(), color=COULEURS[i % len(COULEURS)])
-
-    bilans_reference = next(iter(suivis.values()))
-    ax.set_xticks([bilan["episode"] for bilan in bilans_reference])
-    ax.set_xlim(0, bilans_reference[-1]["episode"] * 1.02)
-    ax.set_ylim(0, 105)
-    ax.set_yticks(range(0, 101, 20))
-    ax.set_xlabel("Nombre d'épisodes d'entraînement")
-    ax.set_ylabel("Taux de réussite (%)")
-    ax.grid(True, alpha=0.2)
-    ax.legend(title="Récompense", loc="upper left")
-    ax.set_title(titre)
-    fig.suptitle(
-        f"Politique gloutonne, mêmes {bilans_reference[-1]['tests']} départs de test, "
-        f"{bilans_reference[-1]['max_pas']} mouvements maximum par essai",
-        fontsize=10, color=ENCRE_SECONDAIRE,
-    )
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
-
-
-# ---------------------------------------------------------------------------
 # Politique optimale du labyrinthe (référence exacte, calculée sans apprentissage)
 # ---------------------------------------------------------------------------
 def retours_optimaux(environnement):
@@ -776,85 +743,5 @@ def graphe_comparaison_labyrinthes(suivis, fichier):
     fig.legend(*ax_reussite.get_legend_handles_labels(),
                loc="outside lower center", ncols=len(suivis))
     fig.suptitle("Labyrinthes 5 x 5 et 36 x 36 : effet de la taille sur le Q-learning")
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
-
-
-# ---------------------------------------------------------------------------
-# Bras : longueur des épisodes pendant l'entraînement (comparable entre récompenses)
-# ---------------------------------------------------------------------------
-def graphe_longueur_episodes_bras(algorithmes, fichier, fenetre=100,
-                                  titre="Bras robotique : longueur des épisodes "
-                                        "pendant l'apprentissage"):
-    """`algorithmes` : {mode: QLearning}. Les échelles de récompense diffèrent,
-    mais le nombre de mouvements par épisode est comparable."""
-    fig, ax = plt.subplots(figsize=(11, 6), layout="constrained")
-    max_pas, nb_episodes = 0, 0
-    for i, (mode, algorithme) in enumerate(algorithmes.items()):
-        couleur = COULEURS[i % len(COULEURS)]
-        episodes = np.arange(1, len(algorithme.nombre_actions) + 1)
-        moyenne = moyenne_glissante(algorithme.nombre_actions, fenetre)
-        ax.plot(episodes, moyenne, color=couleur, label=mode.capitalize())
-        ax.text(episodes[-1] * 1.01, moyenne[-1], mode.capitalize(),
-                va="center", fontsize=9, color=ENCRE)
-        max_pas = max(max_pas, algorithme.max_pas)
-        nb_episodes = max(nb_episodes, len(episodes))
-
-    ax.axhline(max_pas, color=ENCRE_SECONDAIRE, linewidth=1, linestyle="--")
-    ax.text(0, max_pas, f" limite : {max_pas} mouvements (épisode sans succès)",
-            va="bottom", fontsize=9, color=ENCRE_SECONDAIRE)
-    ax.set_xlim(0, nb_episodes * 1.1)
-    ax.set_ylim(0, max_pas * 1.12)
-    ax.set_xlabel("épisode d'entraînement")
-    ax.set_ylabel(f"mouvements par épisode (moyenne glissante sur {fenetre})")
-    ax.grid(True, alpha=0.2)
-    ax.legend(title="Récompense", loc="lower left")
-    ax.set_title(f"{titre}\n(exploration epsilon-greedy incluse)")
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
-
-
-# ---------------------------------------------------------------------------
-# Bras : 4 actions (une articulation à la fois) contre 9 actions (simultanées)
-# ---------------------------------------------------------------------------
-def graphe_comparaison_actions(suivis, algorithmes, fichier, fenetre=100):
-    """`suivis[nb_actions][mode]` : bilans d'évaluation ; `algorithmes[nb_actions][mode]`.
-
-    Couleur = récompense, trait plein = 4 actions, tirets = 9 actions.
-    """
-    styles = {4: "-", 9: "--"}
-    fig, (ax_reussite, ax_longueur) = plt.subplots(1, 2, figsize=(16, 6.5),
-                                                   layout="constrained")
-    max_pas = 0
-    for nb_actions, suivis_modes in suivis.items():
-        for i, (mode, bilans) in enumerate(suivis_modes.items()):
-            couleur = COULEURS[i % len(COULEURS)]
-            etiquette = f"{mode.capitalize()}, {nb_actions} actions"
-            ax_reussite.plot([b["episode"] for b in bilans],
-                             [b["taux_reussite"] for b in bilans],
-                             linestyle=styles.get(nb_actions, ":"), marker="o",
-                             markersize=5, color=couleur, label=etiquette)
-            algorithme = algorithmes[nb_actions][mode]
-            episodes = np.arange(1, len(algorithme.nombre_actions) + 1)
-            ax_longueur.plot(episodes, moyenne_glissante(algorithme.nombre_actions, fenetre),
-                             linestyle=styles.get(nb_actions, ":"), color=couleur,
-                             label=etiquette)
-            max_pas = max(max_pas, algorithme.max_pas)
-
-    ax_reussite.set_ylim(0, 105)
-    ax_reussite.set_xlabel("Nombre d'épisodes d'entraînement")
-    ax_reussite.set_ylabel("Taux de réussite (%)")
-    ax_reussite.set_title("Réussite de la politique gloutonne (mêmes départs de test)")
-    ax_longueur.axhline(max_pas, color=ENCRE_SECONDAIRE, linewidth=1, linestyle=":")
-    ax_longueur.set_ylim(0, max_pas * 1.08)
-    ax_longueur.set_xlabel("épisode d'entraînement")
-    ax_longueur.set_ylabel(f"mouvements par épisode (moyenne glissante sur {fenetre})")
-    ax_longueur.set_title("Longueur des épisodes (exploration incluse)")
-    for ax in (ax_reussite, ax_longueur):
-        ax.grid(True, alpha=0.2)
-    fig.legend(*ax_reussite.get_legend_handles_labels(), loc="outside lower center",
-               ncols=len(suivis))
-    fig.suptitle("Bras robotique : une articulation à la fois (4 actions) "
-                 "ou les deux en même temps (9 actions)")
     fig.savefig(fichier, dpi=150)
     plt.close(fig)
