@@ -30,6 +30,7 @@ reinforcement-learning-robotics/
 │   ├── entrainement_bras_robotique.py
 │   ├── graphes.py                     # Génère tous les graphes
 │   ├── etude_epsilon_depart.py        # Epsilon et position de depart du bras
+│   ├── animation_bras.py              # Animation 2D à partir de la Q-table apprise
 │   └── README_graphes.md
 │
 ├── tests/
@@ -329,6 +330,40 @@ action immobile) et un petit entraînement
 sans affichage graphique.
 `tests/test_graphes.py` vérifie les compteurs utilisés par les graphes, et que
 les graphes ne modifient pas l'entraînement.
+
+### Voir le bras bouger selon la Q-table apprise
+
+Le programme suivant entraîne un bras robotique à **deux segments articulés**
+(Q-learning tabulaire ; Q(s,a) initialisée à zéro), puis anime la politique
+gloutonne apprise : chaque mouvement vient de `argmax_a Q(s,a)`.
+La trajectoire, les angles, les articulations et la cible sont affichés.
+L'animation interpole simplement les rotations de 10° entre états :
+**ce n'est pas un double pendule libre avec gravité et inertie**.
+
+```powershell
+# Bras à 9 actions, récompense distance, 5 000 épisodes : fenêtre animée
+py -m experiences.animation_bras
+
+# Comparaison avec 4 actions ou récompense naive
+py -m experiences.animation_bras --actions 4 --mode naive
+
+# Autre position de départ, tirée aléatoirement après l'entraînement
+py -m experiences.animation_bras --depart aleatoire
+
+# Exporter une animation GIF, sans fenêtre
+py -m experiences.animation_bras --gif --sans-fenetre
+
+# Conserver la Q-table entraînée pour la rejouer sans réentraîner
+py -m experiences.animation_bras --enregistrer-q experiences/resultats/bras_robotique/q_distance_9.npy
+py -m experiences.animation_bras --charger-q experiences/resultats/bras_robotique/q_distance_9.npy --angles 120 60
+```
+
+Par défaut : cible (1, 1), segments de longueur 1, angles initiaux
+(90°, 0°), 9 actions, `distance`, graine 42. La sortie indique si la
+politique atteint la cible, boucle ou dépasse 50 mouvements. Aucun calcul
+de Q-learning n'est effectué pendant le rejeu ; la Q-table n'est jamais
+modifiée par l'animation. Les fichiers GIF sont écrits sous
+`experiences/resultats/bras_robotique/animations/`.
 
 ### Lancer les trois modes du bras
 
