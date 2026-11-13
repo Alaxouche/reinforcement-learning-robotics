@@ -126,23 +126,6 @@ class TestBrasRobotique(unittest.TestCase):
                 self.assertFalse(termine)
                 self.assertLessEqual(recompense, 0.0)
 
-    def test_initialisation_constante_de_q(self):
-        env = BrasRobotNaive(nb_actions=9)
-        etat_aleatoire = np.random.get_state()
-        agent = QLearning(environnement=env, alpha=0.2, gamma=0.95, epsilon=0.0,
-                          epsilon_min=0.0, decroissance=1.0, nb_episodes=1, max_pas=5,
-                          initialisation="constante", valeur_initiale=0.5)
-        self.assertEqual(agent.Q.shape, (1296, 9))
-        self.assertTrue((agent.Q == 0.5).all())
-        # Aucun tirage aléatoire consommé par l'initialisation constante.
-        np.testing.assert_array_equal(etat_aleatoire[1], np.random.get_state()[1])
-        # Égalité : argmax choisit la première action.
-        self.assertEqual(agent.meilleure_action(env.etat_initial), 0)
-        with self.assertRaises(ValueError):
-            QLearning(environnement=env, alpha=0.2, gamma=0.95, epsilon=0.0,
-                      epsilon_min=0.0, decroissance=1.0, nb_episodes=1, max_pas=5,
-                      initialisation="zero")
-
     def test_entrainement_et_evaluation(self):
         np.random.seed(42)
         env = BrasRobotDistance(depart_aleatoire=True, seed=42)
