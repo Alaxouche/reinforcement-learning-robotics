@@ -428,5 +428,34 @@ class TestExplorationEpsilonDepart(unittest.TestCase):
                                     "exploration_effective.png"})
 
 
+class TestVitesseApprentissage(unittest.TestCase):
+    def test_deux_graphes_par_recompense(self):
+        """Les trois agents ont la meme configuration et les memes departs de test."""
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from experiences import vitesse_apprentissage
+
+        with TemporaryDirectory() as tmp:
+            with (mock.patch.object(graphes, "graphe_progression_reussite") as trace_reussite,
+                  mock.patch.object(graphes, "graphe_longueur_episodes_bras") as trace_mouvements):
+                resultat = vitesse_apprentissage.generer(
+                    nb_actions=4, nb_episodes=6, seed=42,
+                    pas_evaluation=3, nb_tests=3, fenetre=2, dossier=Path(tmp)
+                )
+            self.assertEqual(set(resultat["suivis"]), {"naive", "smart", "distance"})
+            self.assertEqual([x["episode"] for x in resultat["suivis"]["naive"]], [3, 6])
+            self.assertEqual([x["episode"] for x in resultat["suivis"]["smart"]], [3, 6])
+            self.assertEqual(len(resultat["algorithmes"]["distance"].nombre_actions), 6)
+            self.assertTrue(all(a.Q.shape == (1296, 4)
+                                for a in resultat["algorithmes"].values()))
+            self.assertEqual(resultat["reussite"].name,
+                             "comparaison_reussite_apprentissage.png")
+            self.assertEqual(resultat["mouvements"].name,
+                             "comparaison_longueur_episodes.png")
+            self.assertEqual(trace_reussite.call_count, 1)
+            self.assertEqual(trace_mouvements.call_count, 1)
+            self.assertEqual(trace_mouvements.call_args.kwargs["fenetre"], 2)
+
+
 if __name__ == "__main__":
     unittest.main()
