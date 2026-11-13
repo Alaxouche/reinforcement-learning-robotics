@@ -287,7 +287,26 @@ def nettoyer_anciens_resultats_bras():
         (dossier_bras / ancien).unlink(missing_ok=True)
 
 
+def nettoyer_anciens_graphes_epsilon():
+    """Enleve uniquement les PNG de l'ancienne etude sur Q initiale.
+
+    Ces PNG sont des fichiers locaux generes (non suivis par Git) :
+    un git pull ne les efface pas.
+    """
+    ancien_dossier = DOSSIER_RESULTATS / "bras_robotique" / "epsilon"
+    noms = ("couverture_couples.png", "reussite.png", "bilan_epsilon.png")
+    for nombre_actions in ("4_actions", "9_actions"):
+        dossier = ancien_dossier / nombre_actions
+        for nom in noms:
+            (dossier / nom).unlink(missing_ok=True)
+        if dossier.is_dir() and not any(dossier.iterdir()):
+            dossier.rmdir()
+    if ancien_dossier.is_dir() and not any(ancien_dossier.iterdir()):
+        ancien_dossier.rmdir()
+
+
 def main():
+    nettoyer_anciens_graphes_epsilon()
     suivis_bras = {n: {} for n in NOMBRES_ACTIONS_BRAS}
     algorithmes_bras = {n: {} for n in NOMBRES_ACTIONS_BRAS}
     suivis_labyrinthes = {}
