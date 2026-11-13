@@ -30,7 +30,6 @@ reinforcement-learning-robotics/
 │   ├── entrainement_bras_robotique.py
 │   ├── graphes.py                     # Génère tous les graphes
 │   ├── etude_epsilon_depart.py        # Epsilon et position de depart du bras
-│   ├── vitesse_apprentissage.py       # Comparaison des recompenses
 │   └── README_graphes.md
 │
 ├── tests/
@@ -167,27 +166,11 @@ bleue). Pour les labyrinthes, en plus : écart à la politique optimale depuis
 chaque case (7), et une **comparaison 5 x 5 / 36 x 36**
 (`labyrinthes/comparaison_5x5_36x36.png`).
 
-**Deux graphiques des récompenses du bras**, pour 4 et pour 9 actions
-(`bras_robotique/4_actions/` et `bras_robotique/9_actions/`) :
-- taux de réussite de la politique tous les 500 épisodes (mêmes 30 départs) ;
-- longueur des épisodes pendant l'entraînement (moyenne glissante).
-
-Pour **générer uniquement ces deux graphiques**, sans lancer les labyrinthes ni
-les cartes Q, utiliser :
-
-```powershell
-py -m experiences.vitesse_apprentissage              # 4 et 9 actions
-py -m experiences.vitesse_apprentissage --actions 9  # 9 actions uniquement
-```
-
-Les courbes comparent `naive`, `smart` et `distance` avec les mêmes
-paramètres, une Q-table initialement nulle et des départs d'entraînement
-aléatoires. Le taux de réussite est évalué sans exploration sur les mêmes
-positions de test ; les mouvements par épisode comptent l'exploration.
-Un faible nombre de mouvements ne prouve donc pas à lui seul une bonne politique.
-
-Plus une **comparaison 4 / 9 actions** (`bras_robotique/comparaison_4_9_actions.png`).
 Le graphique de comparaison labyrinthe/bras a été retiré.
+Les anciennes courbes de réussite et de mouvements par épisode du bras
+ainsi que la comparaison 4 / 9 actions fondée sur ces deux mesures ne sont
+plus générées. Leurs PNG locaux sont effacés automatiquement par
+`py -m experiences.graphes` ou `py -m experiences.etude_epsilon_depart`.
 Le graphe 4 affiche des **flèches et un chemin dans le labyrinthe**.
 Pour le bras à 4 actions, il présente **quatre couleurs selon l'action préférée**
 (theta1+, theta1-, theta2+, theta2-), sans texte ni chemin superposé ;
