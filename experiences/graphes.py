@@ -56,14 +56,15 @@ EXPERIENCES_LABYRINTHES = [
 NOMBRES_ACTIONS_BRAS = (4, 9)
 
 
-def config_bras(mode, nb_actions=4, **reglages):
+def config_bras(mode, nb_actions=4, depart_aleatoire=True, **reglages):
     """Configuration d'un bras ; `reglages` remplace les hyperparamètres par défaut."""
     classe = MODES_BRAS[mode]
     config = {
         "nom": f"Bras robotique ({mode}, {nb_actions} actions)",
         "dossier": Path("bras_robotique", f"{nb_actions}_actions", mode),
         "mode": mode, "nb_actions": nb_actions,
-        "construire": lambda seed: classe(depart_aleatoire=True, seed=seed,
+        "depart_aleatoire": depart_aleatoire,
+        "construire": lambda seed: classe(depart_aleatoire=depart_aleatoire, seed=seed,
                                           nb_actions=nb_actions),
         "alpha": 0.2, "gamma": 0.95, "epsilon": 1.0, "epsilon_min": 0.15,
         "decroissance": 0.9995, "nb_episodes": 5000, "max_pas": 50,
@@ -85,7 +86,7 @@ def creer_agent(config, seed):
         environnement=environnement,
         alpha=config["alpha"],
         gamma=config["gamma"],
-        epsilon=1.0,
+        epsilon=config.get("epsilon", 1.0),
         epsilon_min=config["epsilon_min"],
         decroissance=config["decroissance"],
         nb_episodes=config["nb_episodes"],
