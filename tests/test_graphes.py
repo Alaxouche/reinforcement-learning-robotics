@@ -25,32 +25,23 @@ def agent_bras(seed=42, nb_episodes=50):
 
 
 class TestIndicateurs(unittest.TestCase):
-    def test_initialisation_aleatoire_reproductible_de_q(self):
-        """Q est aléatoire, centrée sur zéro et reproductible par graine."""
-        config = experience.EXPERIENCES_BRAS[0]
-        premier, _ = experience.creer_agent(config, 42)
-        second, _ = experience.creer_agent(config, 42)
-        autre, _ = experience.creer_agent(config, 43)
+    def test_q_initialisee_a_zero_pour_tous_les_agents(self):
+        """Toutes les configurations demarrent avec la meme Q-table nulle."""
+        for config in experience.EXPERIENCES_BRAS:
+            for seed in (42, 43):
+                agent, _ = experience.creer_agent(config, seed)
+                self.assertEqual(agent.Q.shape, (1296, config["nb_actions"]))
+                self.assertTrue(np.all(agent.Q == 0))
 
-        np.testing.assert_array_equal(premier.Q, second.Q)
-        self.assertFalse(np.array_equal(premier.Q, autre.Q))
-        self.assertEqual(premier.Q.shape, (1296, 4))
-        self.assertTrue((premier.Q >= -0.1).all())
-        self.assertTrue((premier.Q <= 0.1).all())
-        self.assertTrue((premier.Q < 0).any())
-        self.assertTrue((premier.Q > 0).any())
-        self.assertFalse((premier.Q == 0).all())
-
-        # Pour comparer les récompenses, leur Q-table initiale est identique
-        # (à nombre d'actions égal ; 9 actions donnent une table 1296 x 9).
-        references = {}
-        for config_mode in experience.EXPERIENCES_BRAS:
-            agent, _ = experience.creer_agent(config_mode, 42)
-            self.assertEqual(agent.Q.shape, (1296, config_mode["nb_actions"]))
-            reference = references.setdefault(config_mode["nb_actions"], agent.Q)
-            np.testing.assert_array_equal(reference, agent.Q)
-        np.testing.assert_array_equal(premier.Q, references[4])
-        self.assertEqual(sorted(references), [4, 9])
+    def test_depart_fixe_ou_aleatoire(self):
+        fixe = experience.config_bras("distance", 9, depart_aleatoire=False)
+        aleatoire = experience.config_bras("distance", 9, depart_aleatoire=True)
+        _, env_fixe = experience.creer_agent(fixe, 42)
+        _, env_aleatoire = experience.creer_agent(aleatoire, 42)
+        self.assertEqual([env_fixe.reset() for _ in range(20)], [env_fixe.etat_initial] * 20)
+        departs = [env_aleatoire.reset() for _ in range(20)]
+        self.assertGreater(len(set(departs)), 1)
+        self.assertTrue(set(departs).issubset(env_aleatoire.etats_depart))
 
     def test_compteurs_coherents(self):
         for env in (Labyrinthe5x5(), BrasRobotNaive(depart_aleatoire=True, seed=1)):
@@ -379,6 +370,26 @@ class TestNeufActions(unittest.TestCase):
         self.assertTrue(all(0 < c <= 100 for c in couvertures))
         self.assertEqual(env.nb_actions, 9)
 
+
+
+class TestExplorationEpsilonDepart(unittest.TestCase):
+    def test_impact_epsilon_et_positions_initiales(self):
+        from experiences import etude_epsilon_depart
+        resultats = etude_epsilon_depart.etudier(
+            profils=("rapide",), seeds=(42,), nb_episodes=20,
+            pas_evaluation=10, nb_tests=3, mode="distance", nb_actions=9
+        )
+        self.assertEqual(set(resultats), {"fixe", "aleatoire"})
+        for nom_depart, groupe in resultats.items():
+            donnees = groupe["rapide"]
+            self.assertEqual([b["episode"] for b in donnees["evaluations"]], [10, 20])
+            self.assertEqual(len(donnees["epsilons"]), 20)
+            self.assertEqual(donnees["epsilons"][0], 1.0)
+            self.assertLess(donnees["epsilons"][-1], 1.0)
+            self.assertTrue(all(0 <= b["taux_reussite"] <= 100 for b in donnees["evaluations"]))
+            self.assertTrue(all(0 <= b["couples_essayes"] <= 100 for b in donnees["evaluations"]))
+        self.assertEqual(resultats["fixe"]["rapide"]["etats_depart_distincts"], 1)
+        self.assertGreater(resultats["aleatoire"]["rapide"]["etats_depart_distincts"], 1)
 
 
 if __name__ == "__main__":
