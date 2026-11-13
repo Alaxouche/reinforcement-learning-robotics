@@ -30,13 +30,10 @@ class QLearning:
         self.epsilons = []  # Epsilon utilisé pour chaque épisode (avant décroissance).
         self.taux_exploration = []  # Part d'actions tirées au hasard dans chaque épisode.
 
-        # Une ligne par état, une colonne par action.
-        # Petites valeurs initiales aléatoires (positives et négatives).
-        # L'initialisation suit la graine np.random.seed(...) utilisée par
-        # les expériences : les trois modes démarrent avec la même Q-table.
-        self.Q = np.random.uniform(
-            -0.1, 0.1, size=(self.env.nb_etats, self.env.nb_actions)
-        )
+        # Chaque experience demarre avec Q(s, a) = 0 pour tous les couples.
+        # La table est creee une seule fois : les valeurs apprises sont
+        # conservees entre les episodes d'un meme entrainement.
+        self.Q = np.zeros((self.env.nb_etats, self.env.nb_actions), dtype=float)
 
         # Compteurs cumulés : comme la table Q, ils survivent aux appels à apprendre().
         self.visites = np.zeros(self.env.nb_etats, dtype=int)
