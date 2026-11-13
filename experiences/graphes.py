@@ -6,15 +6,10 @@
     6b_passages_par_action.png   passages par type de déplacement, une couleur par action
     7_ecart_optimal.png          (labyrinthes) écart au retour optimal depuis chaque case
     comparaison_5x5_36x36.png               (labyrinthes) effet de la taille
-    comparaison_reussite_apprentissage.png  taux de réussite, tous les 500 épisodes
-    comparaison_longueur_episodes.png       mouvements par épisode pendant l'entraînement
-    comparaison_4_9_actions.png             (bras) une articulation à la fois ou les deux
 
 Les cartes sont écrites dans experiences/resultats/labyrinthes/<taille>/
 (5x5, 36x36) et experiences/resultats/bras_robotique/<n>_actions/<mode>/
-(4 ou 9 actions ; naive, smart, distance). Les comparaisons des récompenses
-se trouvent dans experiences/resultats/bras_robotique/<n>_actions/, celle des
-4 et 9 actions dans experiences/resultats/bras_robotique/.
+(4 ou 9 actions ; naive, smart, distance).
 Lancement depuis la racine du projet : py -m experiences.graphes
 """
 
@@ -287,6 +282,17 @@ def nettoyer_anciens_resultats_bras():
         (dossier_bras / ancien).unlink(missing_ok=True)
 
 
+def nettoyer_anciens_courbes_bras():
+    """Nettoie les anciens graphiques reussite/mouvements sans toucher aux autres."""
+    racine = DOSSIER_RESULTATS / "bras_robotique"
+    (racine / "comparaison_4_9_actions.png").unlink(missing_ok=True)
+    for nb_actions in (4, 9):
+        dossier = racine / f"{nb_actions}_actions"
+        for nom in ("comparaison_reussite_apprentissage.png",
+                    "comparaison_longueur_episodes.png"):
+            (dossier / nom).unlink(missing_ok=True)
+
+
 def nettoyer_anciens_graphes_epsilon():
     """Enleve uniquement les PNG de l'ancienne etude sur Q initiale.
 
@@ -307,10 +313,9 @@ def nettoyer_anciens_graphes_epsilon():
 
 def main():
     nettoyer_anciens_graphes_epsilon()
-    suivis_bras = {n: {} for n in NOMBRES_ACTIONS_BRAS}
-    algorithmes_bras = {n: {} for n in NOMBRES_ACTIONS_BRAS}
     suivis_labyrinthes = {}
     nettoyer_anciens_resultats_bras()
+    nettoyer_anciens_courbes_bras()
     # Le graphique de comparaison labyrinthe / bras est retiré.
     (DOSSIER_RESULTATS / "comparaison_labyrinthe_bras.png").unlink(missing_ok=True)
     # Les cartes du 5 x 5 sont désormais rangées dans labyrinthes/5x5/.
@@ -328,14 +333,9 @@ def main():
             (dossier / ancien).unlink(missing_ok=True)
         print(f"\n{nom}")
 
-        # Chaque bras est entraîné une seule fois ; les évaluations intermédiaires
-        # sont déterministes et ne changent pas l'entraînement ni la Q-table finale.
+        # Seules les cartes du bras sont produites, sans suivi de réussite.
         if config["dossier"].parts[0] == "bras_robotique":
-            algorithme, environnement, evaluations = entrainer_avec_suivi(
-                config, SEED_REFERENCE
-            )
-            suivis_bras[config["nb_actions"]][config["mode"]] = evaluations
-            algorithmes_bras[config["nb_actions"]][config["mode"]] = algorithme
+            algorithme, environnement = entrainer(config, SEED_REFERENCE)
         else:
             algorithme, environnement, evaluations = entrainer_labyrinthe_avec_suivi(
                 config, SEED_REFERENCE
@@ -356,24 +356,6 @@ def main():
             graphes.graphe_ecart_optimal(algorithme, environnement, nom,
                                                  dossier / "7_ecart_optimal.png")
 
-
-    dossier_bras = DOSSIER_RESULTATS / "bras_robotique"
-    for nb_actions in NOMBRES_ACTIONS_BRAS:
-        dossier = dossier_bras / f"{nb_actions}_actions"
-        dossier.mkdir(parents=True, exist_ok=True)
-        graphes.graphe_progression_reussite(
-            suivis_bras[nb_actions], dossier / "comparaison_reussite_apprentissage.png",
-            titre=f"Bras robotique ({nb_actions} actions) : vitesse d'apprentissage "
-                  "des trois récompenses",
-        )
-        graphes.graphe_longueur_episodes_bras(
-            algorithmes_bras[nb_actions], dossier / "comparaison_longueur_episodes.png",
-            titre=f"Bras robotique ({nb_actions} actions) : longueur des épisodes "
-                  "pendant l'apprentissage",
-        )
-    graphes.graphe_comparaison_actions(
-        suivis_bras, algorithmes_bras, dossier_bras / "comparaison_4_9_actions.png"
-    )
 
     dossier_labyrinthes = DOSSIER_RESULTATS / "labyrinthes"
     graphes.graphe_comparaison_labyrinthes(
