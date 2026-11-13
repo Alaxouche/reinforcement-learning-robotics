@@ -6,11 +6,8 @@ from src.environnements.environnement_discret import EnvironnementDiscret
 class QLearning:
     """Q-learning tabulaire utilisable avec tout EnvironnementDiscret."""
 
-    INITIALISATIONS = ("aleatoire", "constante")
-
     def __init__(self, environnement, alpha, gamma, epsilon,
-                 epsilon_min, decroissance, nb_episodes, max_pas,
-                 initialisation="aleatoire", valeur_initiale=0.0):
+                 epsilon_min, decroissance, nb_episodes, max_pas):
 
         if not isinstance(environnement, EnvironnementDiscret):
             raise TypeError("QLearning nécessite un EnvironnementDiscret.")
@@ -18,8 +15,6 @@ class QLearning:
             raise ValueError("nb_episodes doit être strictement positif.")
         if max_pas <= 0:
             raise ValueError("max_pas doit être strictement positif.")
-        if initialisation not in self.INITIALISATIONS:
-            raise ValueError("initialisation doit valoir 'aleatoire' ou 'constante'.")
 
         self.env = environnement
         self.alpha = alpha
@@ -29,7 +24,6 @@ class QLearning:
         self.decroissance = decroissance
         self.nb_episodes = nb_episodes
         self.max_pas = max_pas
-        self.initialisation = initialisation
 
         self.recompenses = []
         self.nombre_actions = []
@@ -37,16 +31,12 @@ class QLearning:
         self.taux_exploration = []  # Part d'actions tirées au hasard dans chaque épisode.
 
         # Une ligne par état, une colonne par action.
-        taille = (self.env.nb_etats, self.env.nb_actions)
-        if initialisation == "aleatoire":
-            # Petites valeurs initiales aléatoires (positives et négatives).
-            # L'initialisation suit la graine np.random.seed(...) utilisée par
-            # les expériences : les trois modes démarrent avec la même Q-table.
-            self.Q = np.random.uniform(-0.1, 0.1, size=taille)
-        else:
-            # Même valeur partout ; aucun tirage aléatoire consommé.
-            # En cas d'égalité, argmax choisit l'action de plus petit indice.
-            self.Q = np.full(taille, float(valeur_initiale))
+        # Petites valeurs initiales aléatoires (positives et négatives).
+        # L'initialisation suit la graine np.random.seed(...) utilisée par
+        # les expériences : les trois modes démarrent avec la même Q-table.
+        self.Q = np.random.uniform(
+            -0.1, 0.1, size=(self.env.nb_etats, self.env.nb_actions)
+        )
 
         # Compteurs cumulés : comme la table Q, ils survivent aux appels à apprendre().
         self.visites = np.zeros(self.env.nb_etats, dtype=int)
