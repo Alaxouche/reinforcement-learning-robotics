@@ -27,8 +27,6 @@ COULEURS_ACTIONS_BRAS = ["#3b82f6", "#f97316", "#22c55e", "#a855f7"]
 # variation de theta2), chacune dans {-pas, 0, +pas}. Échelle divergente :
 # rouge = diminue, gris clair = immobile, bleu = augmente.
 COULEURS_VARIATION = ["#e34948", "#f0efec", "#2a78d6"]
-# Valeurs d'epsilon (ordonnées) : dégradé bleu du clair au foncé.
-BLEUS_ORDONNES = ["#86b6ef", "#5598e7", "#2a78d6", "#256abf", "#184f95", "#0d366b"]
 ENCRE = "#0b0b0b"
 ENCRE_SECONDAIRE = "#52514e"
 GRILLE = "#e1e0d9"
@@ -858,85 +856,5 @@ def graphe_comparaison_actions(suivis, algorithmes, fichier, fenetre=100):
                ncols=len(suivis))
     fig.suptitle("Bras robotique : une articulation à la fois (4 actions) "
                  "ou les deux en même temps (9 actions)")
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
-
-
-# ---------------------------------------------------------------------------
-# Bras : impact d'epsilon sur l'exploration, initialisation constante / aléatoire
-# ---------------------------------------------------------------------------
-NOMS_INITIALISATIONS = {"constante": "Q initiale constante",
-                        "aleatoire": "Q initiale aléatoire"}
-
-
-def graphe_epsilon_evolution(resultats, cle, etiquette_y, titre, fichier):
-    """Une ligne par récompense, une colonne par initialisation, une courbe par epsilon.
-
-    `resultats[mode][initialisation][epsilon]["evaluations"]` : bilans successifs.
-    """
-    modes = list(resultats)
-    initialisations = list(resultats[modes[0]])
-    epsilons = list(resultats[modes[0]][initialisations[0]])
-    fig, axes = plt.subplots(len(modes), len(initialisations),
-                             figsize=(6.5 * len(initialisations), 3.6 * len(modes) + 1),
-                             layout="constrained", sharex=True, sharey=True, squeeze=False)
-    for ligne, mode in enumerate(modes):
-        for colonne, initialisation in enumerate(initialisations):
-            ax = axes[ligne, colonne]
-            for i, epsilon in enumerate(epsilons):
-                bilans = resultats[mode][initialisation][epsilon]["evaluations"]
-                ax.plot([b["episode"] for b in bilans], [b[cle] for b in bilans],
-                        color=BLEUS_ORDONNES[min(i, len(BLEUS_ORDONNES) - 1)],
-                        label=f"epsilon = {epsilon:g}")
-            ax.set_ylim(0, 105)
-            ax.grid(True, alpha=0.2)
-            nom_init = NOMS_INITIALISATIONS.get(initialisation, initialisation)
-            ax.set_title(f"{mode.capitalize()} - {nom_init}")
-            if colonne == 0:
-                ax.set_ylabel(etiquette_y)
-            if ligne == len(modes) - 1:
-                ax.set_xlabel("épisode d'entraînement")
-    fig.legend(*axes[0, 0].get_legend_handles_labels(), loc="outside lower center",
-               ncols=len(epsilons))
-    fig.suptitle(titre)
-    fig.savefig(fichier, dpi=150)
-    plt.close(fig)
-
-
-def graphe_epsilon_bilan(resultats, fichier):
-    """Mesures finales en fonction d'epsilon : une colonne par récompense.
-
-    Lignes : couples (s, a) essayés, réussite gloutonne, longueur des derniers épisodes.
-    Bleu = Q initiale constante, orange = Q initiale aléatoire.
-    """
-    mesures = [("couples_essayes", "couples (s, a) essayés (%)", (0, 105)),
-               ("taux_reussite", "réussite gloutonne (%)", (0, 105)),
-               ("longueur_finale", "mouvements par épisode\n(500 derniers épisodes)", None)]
-    modes = list(resultats)
-    fig, axes = plt.subplots(len(mesures), len(modes),
-                             figsize=(5.5 * len(modes), 3.4 * len(mesures) + 1),
-                             layout="constrained", sharex=True, squeeze=False)
-    for colonne, mode in enumerate(modes):
-        for i, (initialisation, series) in enumerate(resultats[mode].items()):
-            epsilons = list(series)
-            positions = np.arange(len(epsilons))
-            for ligne, (cle, etiquette, limites) in enumerate(mesures):
-                ax = axes[ligne, colonne]
-                ax.plot(positions, [series[e]["final"][cle] for e in epsilons],
-                        marker="o", markersize=7, color=COULEURS[i % len(COULEURS)],
-                        label=NOMS_INITIALISATIONS.get(initialisation, initialisation))
-                ax.set_xticks(positions, [f"{e:g}" for e in epsilons])
-                if limites:
-                    ax.set_ylim(*limites)
-                else:
-                    ax.set_ylim(bottom=0)
-                ax.grid(True, alpha=0.2)
-                if colonne == 0:
-                    ax.set_ylabel(etiquette)
-        axes[0, colonne].set_title(mode.capitalize())
-        axes[-1, colonne].set_xlabel("epsilon (constant pendant tout l'entraînement)")
-    fig.legend(*axes[0, 0].get_legend_handles_labels(), loc="outside lower center",
-               ncols=2)
-    fig.suptitle("Bras robotique : impact d'epsilon sur l'exploration et la politique apprise")
     fig.savefig(fichier, dpi=150)
     plt.close(fig)
