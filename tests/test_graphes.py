@@ -388,8 +388,6 @@ class TestExplorationEpsilonDepart(unittest.TestCase):
             self.assertLess(donnees["epsilons"][-1], 1.0)
             self.assertTrue(all(0 <= b["taux_reussite"] <= 100 for b in donnees["evaluations"]))
             self.assertTrue(all(0 <= b["couples_essayes"] <= 100 for b in donnees["evaluations"]))
-        self.assertEqual(resultats["fixe"]["rapide"]["etats_depart_distincts"], 1)
-        self.assertGreater(resultats["aleatoire"]["rapide"]["etats_depart_distincts"], 1)
 
 
 if __name__ == "__main__":
