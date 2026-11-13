@@ -121,8 +121,8 @@ Q, epsilon et générateurs aléatoires sont conservés entre blocs.
 Lancer `py -m experiences.etude_epsilon_depart` pour comparer les positions
 initiales **fixes (90°, 0°)** et **aléatoires**, à Q(s,a)=0 partout, suivant
 trois vitesses de décroissance d'epsilon (0.99, 0.997, 0.9995).
-Les quatre figures (`epsilon.png`, `exploration_effective.png`,
-`couverture.png` et `reussite.png`) sont rangées dans
+Les trois figures (`epsilon.png`, `exploration_effective.png`
+et `couverture.png`) sont rangées dans
 `experiences/resultats/bras_robotique/epsilon_depart/<n>_actions/<mode>/`.
 Par défaut : récompense distance, 9 actions, 5 000 épisodes et trois graines.
 Les évaluations gloutonnes utilisent les mêmes départs de test pour les
