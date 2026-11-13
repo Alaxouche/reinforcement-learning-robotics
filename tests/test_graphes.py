@@ -389,6 +389,21 @@ class TestExplorationEpsilonDepart(unittest.TestCase):
             self.assertTrue(all(0 <= b["taux_reussite"] <= 100 for b in donnees["evaluations"]))
             self.assertTrue(all(0 <= b["couples_essayes"] <= 100 for b in donnees["evaluations"]))
 
+        # Un ancien graphique de réussite ne doit pas rester dans les résultats.
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temporaire:
+            dossier = Path(temporaire)
+            ancien = dossier / "reussite.png"
+            ancien.write_bytes(b"ancien graphique")
+            with mock.patch.object(Figure, "savefig") as sauvegardes:
+                etude_epsilon_depart.tracer(resultats, dossier)
+            self.assertFalse(ancien.exists())
+            self.assertEqual(sauvegardes.call_count, 3)
+            noms = {appel.args[0].name for appel in sauvegardes.call_args_list}
+            self.assertEqual(noms, {"couverture.png", "epsilon.png",
+                                    "exploration_effective.png"})
+
 
 if __name__ == "__main__":
     unittest.main()
