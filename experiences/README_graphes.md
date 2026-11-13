@@ -19,9 +19,6 @@ Il enregistre des PNG dans :
 - `experiences/resultats/bras_robotique/<n>_actions/comparaison_longueur_episodes.png`
 - `experiences/resultats/bras_robotique/comparaison_4_9_actions.png`
 
-L'étude de epsilon (`py -m experiences.etude_epsilon`, ≈ 3 minutes) écrit ses
-graphes dans `experiences/resultats/bras_robotique/epsilon/9_actions/`.
-
 Les anciens fichiers `1_convergence.png`, `2_epsilon_seeds.png`,
 `5_cartes_q.png`, `5b_carte_valeurs.png`, `7_carte_epsilon.png`,
 `8_mises_a_jour.png` et `9_lien_epsilon_greedy.png` sont supprimés
@@ -44,9 +41,6 @@ placées directement dans `bras_robotique/` avant le passage à 4 / 9 actions.
 | `comparaison_longueur_episodes.png` | Bras : mouvements par épisode pendant l'entraînement (moyenne glissante sur 100), comparable entre récompenses |
 | `comparaison_reussite_apprentissage.png` | Trois courbes de taux de réussite, tous les 500 épisodes, sur les mêmes 30 départs |
 | `comparaison_4_9_actions.png` | Bras : réussite et longueur des épisodes, couleur = récompense, trait plein = 4 actions, tirets = 9 actions |
-| `epsilon/.../couverture_couples.png` | Étude de epsilon : part des couples (s, a) essayés au moins une fois au fil de l'entraînement, une courbe par epsilon (bleu clair = faible, foncé = élevé), une colonne par initialisation de Q, une ligne par récompense |
-| `epsilon/.../reussite.png` | Même disposition, réussite de la politique gloutonne sur les 30 départs de test |
-| `epsilon/.../bilan_epsilon.png` | Mesures finales en fonction d'epsilon : couples essayés, réussite, longueur des 500 derniers épisodes ; bleu = Q initiale constante, orange = Q initiale aléatoire |
 
 Les graphes 3, 4, 6 et 6b sont créés pour chaque environnement, le 7 pour les
 labyrinthes. Les graphiques `comparaison_*` du bras comparent
