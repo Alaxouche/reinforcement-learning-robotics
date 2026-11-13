@@ -116,14 +116,26 @@ aléatoire, aucune mise à jour des Q-values ni des compteurs. Elles
 n'interrompent pas réellement la continuité de l'apprentissage :
 Q, epsilon et générateurs aléatoires sont conservés entre blocs.
 
+## Étude epsilon et départ du bras
+
+Lancer `py -m experiences.etude_epsilon_depart` pour comparer les positions
+initiales **fixes (90°, 0°)** et **aléatoires**, à Q(s,a)=0 partout, suivant
+trois vitesses de décroissance d'epsilon (0.99, 0.997, 0.9995).
+Les quatre figures (`epsilon.png`, `exploration_effective.png`,
+`couverture.png` et `reussite.png`) sont rangées dans
+`experiences/resultats/bras_robotique/epsilon_depart/<n>_actions/<mode>/`.
+Par défaut : récompense distance, 9 actions, 5 000 épisodes et trois graines.
+Les évaluations gloutonnes utilisent les mêmes départs de test pour les
+deux stratégies ; la comparaison ne confond donc pas explorations et
+performances de la politique apprise.
+
 ## Limites d'interprétation
 
-La Q-table n'est plus initialisée à zéro : chaque valeur Q(s,a) est
-tirée uniformément dans [-0,1 ; 0,1]. Avec la graine `42` réappliquée
-à chaque mode, les trois bras démarrent avec **la même table aléatoire**.
-Les expériences doivent être relancées : les anciens PNG correspondent
-à l'ancienne initialisation. Une action jamais essayée conserve toutefois
-sa valeur initiale, et ce biais potentiel n'est pas complètement supprimé.
+La Q-table est désormais initialisée à zéro pour **tous** les agents.
+Cela change les conditions des expériences : les graphiques produits
+avant cette modification sont obsolètes et doivent être régénérés.
+Les départs aléatoires ne concernent que la **position du robot**, jamais
+l'initialisation de Q.
 
 Les comparaisons reposent ici sur une seule graine (`42`) ; elles
 permettent de décrire une expérience, mais ne prouvent pas la convergence
