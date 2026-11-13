@@ -81,20 +81,12 @@ def etudier(mode="distance", nb_actions=9, profils=tuple(DECROISSANCES),
                 axis=0,
             )
             couverture_etats = float(np.mean([e["couverture_etats"] for e in essais]))
-            dernier = bilans[-1]
             resultats[depart][profil] = {
                 "evaluations": bilans,
                 "epsilons": essais[0]["epsilons"],
                 "exploration_effective": exploration.tolist(),
                 "couverture_etats": couverture_etats,
             }
-            print(
-                f"{depart:>9} | {profil:>7} | epsilon_final="
-                f"{essais[0]['epsilons'][-1]:.3f} | couples (s,a)="
-                f"{dernier['couples_essayes']:.1f}% | reussite gloutonne="
-                f"{dernier['taux_reussite']:.1f}% | etats visites="
-                f"{couverture_etats:.1f}%"
-            )
     return resultats
 
 
