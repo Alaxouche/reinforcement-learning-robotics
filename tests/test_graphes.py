@@ -210,23 +210,6 @@ class TestChemin(unittest.TestCase):
         np.testing.assert_array_equal(np_alea[1], etat_apres[1])
         self.assertEqual(np_alea[2:], etat_apres[2:])
 
-    def test_graphe_reussite_avec_et_sans_reussites(self):
-        """La progression se trace même quand un mode ne réussit jamais."""
-        def bilan(episode, pas, tests=5):
-            return dict(episode=episode, tests=tests, max_pas=12,
-                        reussites=len(pas), echecs=tests - len(pas),
-                        taux_reussite=100 * len(pas) / tests,
-                        mouvements_reussis=pas)
-
-        suivis = {
-            "naive": [bilan(50, []), bilan(100, [])],
-            "smart": [bilan(50, [8]), bilan(100, [4, 6, 7])],
-            "distance": [bilan(50, [11]), bilan(100, [4, 9])],
-        }
-        with mock.patch.object(Figure, "savefig") as enregistrer:
-            graphes.graphe_progression_reussite(suivis, "progression.png")
-        self.assertEqual(enregistrer.call_count, 1)
-
     def test_depart_s_uniquement_pour_labyrinthe(self):
         """Les cartes du bras n'indiquent aucun départ fixe."""
         ax = mock.Mock()
@@ -373,6 +356,33 @@ class TestNeufActions(unittest.TestCase):
 
 
 class TestNettoyageAnciennesFigures(unittest.TestCase):
+    def test_supprime_comparaisons_de_recompenses_obsoletes(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as tmp:
+            racine = Path(tmp)
+            dossier = racine / "bras_robotique"
+            dossier.mkdir()
+            (dossier / "comparaison_4_9_actions.png").write_bytes(b"old")
+            for n in (4, 9):
+                cible = dossier / f"{n}_actions"
+                cible.mkdir()
+                for nom in ("comparaison_reussite_apprentissage.png",
+                            "comparaison_longueur_episodes.png"):
+                    (cible / nom).write_bytes(b"old")
+                (cible / "naive").mkdir()
+                (cible / "naive" / "6_visites.png").write_bytes(b"kept")
+            with mock.patch.object(experience, "DOSSIER_RESULTATS", racine):
+                experience.nettoyer_anciens_courbes_bras()
+                experience.nettoyer_anciens_courbes_bras()
+            self.assertFalse((dossier / "comparaison_4_9_actions.png").exists())
+            for n in (4, 9):
+                cible = dossier / f"{n}_actions"
+                self.assertFalse((cible / "comparaison_reussite_apprentissage.png").exists())
+                self.assertFalse((cible / "comparaison_longueur_episodes.png").exists())
+                self.assertTrue((cible / "naive" / "6_visites.png").exists())
+
     def test_anciens_graphes_q_initiale_supprimes_sans_touch_aux_autres(self):
         from pathlib import Path
         from tempfile import TemporaryDirectory
@@ -426,35 +436,6 @@ class TestExplorationEpsilonDepart(unittest.TestCase):
             noms = {appel.args[0].name for appel in sauvegardes.call_args_list}
             self.assertEqual(noms, {"couverture.png", "epsilon.png",
                                     "exploration_effective.png"})
-
-
-class TestVitesseApprentissage(unittest.TestCase):
-    def test_deux_graphes_par_recompense(self):
-        """Les trois agents ont la meme configuration et les memes departs de test."""
-        from pathlib import Path
-        from tempfile import TemporaryDirectory
-        from experiences import vitesse_apprentissage
-
-        with TemporaryDirectory() as tmp:
-            with (mock.patch.object(graphes, "graphe_progression_reussite") as trace_reussite,
-                  mock.patch.object(graphes, "graphe_longueur_episodes_bras") as trace_mouvements):
-                resultat = vitesse_apprentissage.generer(
-                    nb_actions=4, nb_episodes=6, seed=42,
-                    pas_evaluation=3, nb_tests=3, fenetre=2, dossier=Path(tmp)
-                )
-            self.assertEqual(set(resultat["suivis"]), {"naive", "smart", "distance"})
-            self.assertEqual([x["episode"] for x in resultat["suivis"]["naive"]], [3, 6])
-            self.assertEqual([x["episode"] for x in resultat["suivis"]["smart"]], [3, 6])
-            self.assertEqual(len(resultat["algorithmes"]["distance"].nombre_actions), 6)
-            self.assertTrue(all(a.Q.shape == (1296, 4)
-                                for a in resultat["algorithmes"].values()))
-            self.assertEqual(resultat["reussite"].name,
-                             "comparaison_reussite_apprentissage.png")
-            self.assertEqual(resultat["mouvements"].name,
-                             "comparaison_longueur_episodes.png")
-            self.assertEqual(trace_reussite.call_count, 1)
-            self.assertEqual(trace_mouvements.call_count, 1)
-            self.assertEqual(trace_mouvements.call_args.kwargs["fenetre"], 2)
 
 
 if __name__ == "__main__":
