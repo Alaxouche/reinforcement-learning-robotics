@@ -43,16 +43,11 @@ def experience_unique(mode, nb_actions, profil, depart, seed,
     agent, env, evaluations = entrainer_avec_suivi(
         config, seed, pas_evaluation=pas_evaluation, nb_tests=nb_tests
     )
-    # Nombre de positions de depart DISTINCTES pendant l'entrainement :
-    # etats de depart = premier etat de chaque episode, connus via l'environnement.
-    # Dans le cas aleatoire, les visites donnent au moins une borne inferieure
-    # mais ne permettent pas de reconstruire exactement tous les departs.
     return {
         "evaluations": evaluations,
         "epsilons": agent.epsilons,
         "exploration_effective": agent.taux_exploration,
         "couverture_etats": 100.0 * np.count_nonzero(agent.visites) / env.nb_etats,
-        "etats_depart_distincts": 1 if not env.depart_aleatoire else None,
     }
 
 
@@ -91,7 +86,6 @@ def etudier(mode="distance", nb_actions=9, profils=tuple(DECROISSANCES),
                 "epsilons": essais[0]["epsilons"],
                 "exploration_effective": exploration.tolist(),
                 "couverture_etats": couverture_etats,
-                "etats_depart_distincts": 1 if depart == "fixe" else None,
             }
             print(
                 f"{depart:>9} | {profil:>7} | epsilon_final="
