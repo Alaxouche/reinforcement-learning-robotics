@@ -288,7 +288,6 @@ def nettoyer_anciens_resultats_bras():
 
 
 def main():
-    agents = []
     suivis_bras = {n: {} for n in NOMBRES_ACTIONS_BRAS}
     algorithmes_bras = {n: {} for n in NOMBRES_ACTIONS_BRAS}
     suivis_labyrinthes = {}
@@ -318,8 +317,6 @@ def main():
             )
             suivis_bras[config["nb_actions"]][config["mode"]] = evaluations
             algorithmes_bras[config["nb_actions"]][config["mode"]] = algorithme
-            print(f"    succès gloutons sur {evaluations[-1]['tests']} départs : "
-                  f"{evaluations[-1]['reussites']}/{evaluations[-1]['tests']}")
         else:
             algorithme, environnement, evaluations = entrainer_labyrinthe_avec_suivi(
                 config, SEED_REFERENCE
@@ -328,9 +325,6 @@ def main():
             suivis_labyrinthes[nom.replace("Labyrinthe ", "")] = {
                 "algorithme": algorithme, "evaluations": evaluations, "optimal": optimal,
             }
-            print(f"    plus court chemin : {optimal} déplacements ; "
-                  f"chemin glouton appris : {evaluations[-1]['longueur_depart']}")
-        agents.append((nom, algorithme, environnement))
 
         graphes.graphe_cartes_q_brutes(algorithme, environnement, nom,
                                        dossier / "3_cartes_q_brutes.png")
@@ -340,12 +334,9 @@ def main():
         graphes.graphe_passages_par_action(algorithme, environnement, nom,
                                            dossier / "6b_passages_par_action.png")
         if config in EXPERIENCES_LABYRINTHES:
-            bilan = graphes.graphe_ecart_optimal(algorithme, environnement, nom,
+            graphes.graphe_ecart_optimal(algorithme, environnement, nom,
                                                  dossier / "7_ecart_optimal.png")
-            print(f"    départs optimaux : {bilan['optimaux']}/{bilan['departs']}, "
-                  f"échecs : {bilan['echecs']}")
 
-        print(f"    graphes écrits dans {dossier}")
 
     dossier_bras = DOSSIER_RESULTATS / "bras_robotique"
     for nb_actions in NOMBRES_ACTIONS_BRAS:
@@ -361,19 +352,16 @@ def main():
             titre=f"Bras robotique ({nb_actions} actions) : longueur des épisodes "
                   "pendant l'apprentissage",
         )
-        print(f"\nComparaison des récompenses ({nb_actions} actions) : "
-              f"2 graphiques dans {dossier}")
     graphes.graphe_comparaison_actions(
         suivis_bras, algorithmes_bras, dossier_bras / "comparaison_4_9_actions.png"
     )
-    print(f"Comparaison 4 / 9 actions : {dossier_bras / 'comparaison_4_9_actions.png'}")
 
     dossier_labyrinthes = DOSSIER_RESULTATS / "labyrinthes"
     graphes.graphe_comparaison_labyrinthes(
         suivis_labyrinthes, dossier_labyrinthes / "comparaison_5x5_36x36.png"
     )
-    print(f"Comparaison 5x5 / 36x36 : {dossier_labyrinthes / 'comparaison_5x5_36x36.png'}")
-    afficher_comparaison(agents)
+    print("\nGraphiques générés dans experiences/resultats/")
+
 
 
 if __name__ == "__main__":
