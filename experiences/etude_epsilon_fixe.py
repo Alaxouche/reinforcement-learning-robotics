@@ -42,7 +42,7 @@ def experience(epsilon, seed, mode, actions, depart, episodes, pas, tests):
                 "epsilon": epsilon, "seed": seed,
                 "episode": debut + agent.nb_episodes,
                 "couverture": 100.0 * np.count_nonzero(
-                    agent.mises_a_jour[env.etats_depart]
+                    agent.mises_a_jour[np.asarray(env.etats_depart, dtype=int)]
                 ) / couples,
                 "exploration_effective": 100.0 * np.mean(agent.taux_exploration),
             })
