@@ -1,21 +1,19 @@
+"""Q-learning tabulaire : algorithme autonome, sans fonctions de graphiques."""
+
 import numpy as np
 
 from src.environnements.environnement_discret import EnvironnementDiscret
 
 
 class QLearning:
-    """Q-learning tabulaire utilisable avec tout EnvironnementDiscret."""
+    """Apprentissage par difference temporelle, politique epsilon-greedy."""
 
     def __init__(self, environnement, alpha, gamma, epsilon,
                  epsilon_min, decroissance, nb_episodes, max_pas):
-
         if not isinstance(environnement, EnvironnementDiscret):
-            raise TypeError("QLearning nécessite un EnvironnementDiscret.")
-        if nb_episodes <= 0:
-            raise ValueError("nb_episodes doit être strictement positif.")
-        if max_pas <= 0:
-            raise ValueError("max_pas doit être strictement positif.")
-
+            raise TypeError("QLearning necessite un EnvironnementDiscret.")
+        if nb_episodes <= 0 or max_pas <= 0:
+            raise ValueError("nb_episodes et max_pas doivent etre strictement positifs.")
         self.env = environnement
         self.alpha = alpha
         self.gamma = gamma
@@ -25,85 +23,52 @@ class QLearning:
         self.nb_episodes = nb_episodes
         self.max_pas = max_pas
 
-        self.recompenses = []
-        self.nombre_actions = []
-        self.epsilons = []  # Epsilon utilisé pour chaque épisode (avant décroissance).
-        self.taux_exploration = []  # Part d'actions tirées au hasard dans chaque épisode.
-
-        # Chaque experience demarre avec Q(s, a) = 0 pour tous les couples.
-        # La table est creee une seule fois : les valeurs apprises sont
-        # conservees entre les episodes d'un meme entrainement.
+        # L'entrainement commence toujours avec Q(s, a) = 0.
         self.Q = np.zeros((self.env.nb_etats, self.env.nb_actions), dtype=float)
 
-        # Compteurs cumulés : comme la table Q, ils survivent aux appels à apprendre().
-        self.visites = np.zeros(self.env.nb_etats, dtype=int)
-        self.somme_epsilons = np.zeros(self.env.nb_etats)  # Somme d'epsilon à chaque visite.
-        self.mises_a_jour = np.zeros_like(self.Q, dtype=int)
-        self.explorations = np.zeros_like(self.Q, dtype=int)  # Mises à jour dues au hasard.
-
     def meilleure_action(self, etat):
-        """Renvoie l'action autorisée possédant la plus grande Q-value."""
+        """Meilleure action autorisee selon la Q-table actuelle."""
         actions = list(self.env.actions_possibles(etat))
         if not actions:
-            raise ValueError("Aucune action possible dans cet état.")
-        indice = np.argmax(self.Q[etat, actions])
-        return int(actions[indice])
+            raise ValueError("Aucune action possible dans cet etat.")
+        return int(actions[np.argmax(self.Q[etat, actions])])
 
     def choisir_action(self, etat):
-        """Choisit une action epsilon-greedy, renvoie (action, tirée_au_hasard)."""
+        """Action epsilon-greedy (exploration ou exploitation)."""
         actions = list(self.env.actions_possibles(etat))
         if not actions:
-            raise ValueError("Aucune action possible dans cet état.")
+            raise ValueError("Aucune action possible dans cet etat.")
         if np.random.random() < self.epsilon:
-            return int(np.random.choice(actions)), True
-        return self.meilleure_action(etat), False
-
-    def compter_visite(self, etat):
-        self.visites[etat] += 1
-        self.somme_epsilons[etat] += self.epsilon
+            return int(np.random.choice(actions))
+        return self.meilleure_action(etat)
 
     def apprendre(self):
-        """Entraine le Q-learning et collecte les indicateurs par épisode."""
-        self.recompenses = []
-        self.nombre_actions = []
-        self.epsilons = []
-        self.taux_exploration = []
-
+        """Entraine la Q-table ; conserve l'acquis entre les episodes."""
         for _ in range(self.nb_episodes):
-            self.epsilons.append(float(self.epsilon))
             etat = self.env.reset()
-            self.compter_visite(etat)
-            total = 0.0
-            compteur = 0
-            nb_explorations = 0
             for _ in range(self.max_pas):
-                actions = self.env.actions_possibles(etat)
-                if not actions:
+                if not self.env.actions_possibles(etat):
                     break
-                action, exploration = self.choisir_action(etat)
+                action = self.choisir_action(etat)
                 nouvel_etat, recompense, termine = self.env.step(action)
-                self.compter_visite(nouvel_etat)
+
                 if termine:
                     valeur_future = 0.0
                 else:
                     actions_futures = list(self.env.actions_possibles(nouvel_etat))
-                    if actions_futures:
-                        valeur_future = float(np.max(self.Q[nouvel_etat, actions_futures]))
-                    else:
-                        valeur_future = 0.0
-                cible = recompense + self.gamma * valeur_future
-                erreur_td = cible - self.Q[etat, action]
+                    valeur_future = (
+                        float(np.max(self.Q[nouvel_etat, actions_futures]))
+                        if actions_futures else 0.0
+                    )
+                erreur_td = (
+                    recompense + self.gamma * valeur_future
+                    - self.Q[etat, action]
+                )
                 self.Q[etat, action] += self.alpha * erreur_td
-                self.mises_a_jour[etat, action] += 1
-                self.explorations[etat, action] += exploration
-                nb_explorations += exploration
-                total += recompense
-                compteur += 1
                 etat = nouvel_etat
                 if termine:
                     break
-            self.recompenses.append(float(total))
-            self.nombre_actions.append(compteur)
-            self.taux_exploration.append(nb_explorations / compteur if compteur else 0.0)
-            self.epsilon = max(self.epsilon_min, self.epsilon * self.decroissance)
+            self.epsilon = max(
+                self.epsilon_min, self.epsilon * self.decroissance
+            )
         return self.Q

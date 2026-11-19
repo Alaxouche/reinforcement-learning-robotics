@@ -4,7 +4,7 @@ Depuis la racine du dépôt :
     py -m experiences.animation_bras   # menu interactif : actions, reward, depart
     py -m experiences.animation_bras --mode naive --actions 4
     py -m experiences.animation_bras --gif
-    py -m experiences.animation_bras --charger-q experiences/resultats/bras_robotique/q_distance_9.npy
+    py -m experiences.animation_bras --charger-q experiences/q_tables/q_distance_9.npy
 
 Il s'agit d'un bras articulé *commandé* (cinématique), et non d'un
 pendule physique libre : le modèle actuel ne contient ni gravité, ni inertie.
@@ -21,7 +21,15 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.patches import Circle
 import numpy as np
 
-from experiences.entrainement_bras_robotique import MODES_BRAS
+from src.environnements.bras_robotique.bras_robot_naive import BrasRobotNaive
+from src.environnements.bras_robotique.bras_robot_smart import BrasRobotSmart
+from src.environnements.bras_robotique.bras_robot_distance import BrasRobotDistance
+
+MODES_BRAS = {
+    "naive": BrasRobotNaive,
+    "smart": BrasRobotSmart,
+    "distance": BrasRobotDistance,
+}
 from src.algorithmes.q_learning import QLearning
 
 
@@ -332,7 +340,7 @@ def main():
     parser.add_argument("--charger-q", type=Path)
     parser.add_argument("--enregistrer-q", type=Path)
     parser.add_argument("--gif", nargs="?", const="auto", default=None,
-                        help="Enregistrer un GIF. Sans chemin, utilise experiences/resultats/bras_robotique/animations/.")
+                        help="Enregistrer un GIF. Sans chemin, utilise experiences/animations/.")
     parser.add_argument("--sans-fenetre", action="store_true",
                         help="Exporter sans ouvrir la fenêtre Matplotlib.")
     parser.add_argument("--fps", type=int, default=24)
@@ -363,7 +371,7 @@ def main():
           f"extrémité M=({x:.3f}, {y:.3f})")
     print(f"Politique Q : {len(actions)} mouvements | {raison}")
     if args.gif == "auto":
-        gif = (Path("experiences/resultats/bras_robotique/animations")
+        gif = (Path("experiences/animations")
                / f"bras_{args.mode}_{args.actions}_actions.gif")
     else:
         gif = args.gif
