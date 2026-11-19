@@ -218,40 +218,21 @@ def etudier(epsilons=EPSILONS_PAR_DEFAUT, seeds=(42, 43, 44),
             ))
         resultats[epsilon] = essais
 
-    figures = (
-        ("reussite", "Reussite gloutonne sur les departs de test",
-         "Reussite (%)", "1_reussite.png", True),
-        ("politique_changee", "Etats dont la meilleure action a change",
-         "Politique modifiee depuis le bloc precedent (%)",
-         "2_stabilite_politique.png", True),
-        ("variation_q", "Variation relative moyenne des Q-values",
-         "Variation de Q depuis le bloc precedent (%)",
-         "3_variation_q.png", False),
-        ("couverture", "Couverture des couples (etat, action)",
-         "Couples essayes (%)", "4_couverture.png", True),
-        ("exploration_effective", "Exploration effective pendant l'entrainement",
-         "Actions tirees au hasard (%)", "5_exploration_effective.png", True),
-    )
-    for champ, titre, axe_y, nom, borne in figures:
-        tracer_courbe(resultats, champ, titre, axe_y, dossier / nom, borne)
-    tracer_bilan(resultats, dossier / "6_bilan_final.png")
+    # Deux figures conservees : couverture et exploration effective.
+    # Supprimer les anciens fichiers pour eviter toute confusion.
+    for ancien in ("1_reussite.png", "2_stabilite_politique.png",
+                   "3_variation_q.png", "6_bilan_final.png"):
+        (dossier / ancien).unlink(missing_ok=True)
+    tracer_courbe(resultats, "couverture",
+                  "Couverture des couples (etat, action)",
+                  "Couples essayes (%)", dossier / "4_couverture.png", True)
+    tracer_courbe(resultats, "exploration_effective",
+                  "Exploration effective pendant l'entrainement",
+                  "Actions tirees au hasard (%)",
+                  dossier / "5_exploration_effective.png", True)
     sauvegarder_csv(resultats, dossier / "mesures.csv")
-
-    # Les diagnostics detailles sont sauvegardes, sans spammer le terminal.
-    with (dossier / "diagnostics.csv").open("w", newline="", encoding="utf-8") as f:
-        ecrivain = csv.DictWriter(
-            f, fieldnames=("epsilon", "seed", "reussite_finale", "diagnostic")
-        )
-        ecrivain.writeheader()
-        for epsilon, essais in resultats.items():
-            for essai in essais:
-                ecrivain.writerow({
-                    "epsilon": epsilon,
-                    "seed": essai[0]["seed"],
-                    "reussite_finale": essai[-1]["reussite"],
-                    "diagnostic": diagnostic_stabilite(essai),
-                })
-    print(f"6 graphes et 2 CSV enregistres dans : {dossier}")
+    (dossier / "diagnostics.csv").unlink(missing_ok=True)
+    print(f"2 graphes et mesures.csv enregistres dans : {dossier}")
     return resultats
 
 
