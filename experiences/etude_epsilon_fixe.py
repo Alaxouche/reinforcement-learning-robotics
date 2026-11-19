@@ -131,14 +131,25 @@ def agreger(essais, champ):
 
 def tracer_courbe(resultats, champ, titre, ylabel, chemin, borne_100=False):
     fig, ax = plt.subplots(figsize=(9, 5), layout="constrained")
+
+    # Six couleurs explicites pour eviter qu'un style Matplotlib externe
+    # ne recycle sa palette avant la fin de la comparaison.
+    palette = ("#1764B0", "#C9363C", "#16865D",
+               "#8B43B5", "#DF8500", "#008FA3")
+    couleurs = {
+        epsilon: palette[i] if i < len(palette)
+        else plt.get_cmap("hsv")(i / len(resultats))
+        for i, epsilon in enumerate(resultats)
+    }
     for epsilon, essais in resultats.items():
         x, moyenne, ecart = agreger(essais, champ)
         if len(x) == 0:
             continue
-        ligne, = ax.plot(x, moyenne, marker="o", markersize=2.5,
-                         label=f"epsilon = {epsilon:g}")
+        couleur = couleurs[epsilon]
+        ax.plot(x, moyenne, marker="o", markersize=2.5,
+                color=couleur, label=f"epsilon = {epsilon:g}")
         ax.fill_between(x, moyenne - ecart, moyenne + ecart,
-                        alpha=0.12, color=ligne.get_color())
+                        alpha=0.12, color=couleur)
     ax.set(xlabel="Episodes", ylabel=ylabel, title=titre)
     if borne_100:
         ax.set_ylim(0, 105)
@@ -202,7 +213,6 @@ def etudier(epsilons=EPSILONS_PAR_DEFAUT, seeds=(42, 43, 44),
     for epsilon in dict.fromkeys(epsilons):
         essais = []
         for seed in seeds:
-            print(f"Entrainement : epsilon={epsilon:g}, graine={seed} ...", flush=True)
             essais.append(experience(
                 epsilon, seed, mode, actions, depart, episodes, pas, tests
             ))
@@ -227,16 +237,21 @@ def etudier(epsilons=EPSILONS_PAR_DEFAUT, seeds=(42, 43, 44),
     tracer_bilan(resultats, dossier / "6_bilan_final.png")
     sauvegarder_csv(resultats, dossier / "mesures.csv")
 
-    print("\nBILAN : diagnostic par epsilon et par graine")
-    for epsilon, essais in resultats.items():
-        taux = np.mean([e[-1]["reussite"] for e in essais])
-        ecart = np.std([e[-1]["reussite"] for e in essais])
-        print(f"epsilon={epsilon:g} : reussite finale {taux:.1f} +/- {ecart:.1f} %")
-        for essai in essais:
-            print(f"  graine {essai[0]['seed']} : {diagnostic_stabilite(essai)}")
-    print(f"\n6 graphes et mesures.csv dans : {dossier}")
-    print("Le diagnostic porte sur des points de mesure finis ; il ne prouve pas")
-    print("la convergence theorique ni l'optimalite de la politique.")
+    # Les diagnostics detailles sont sauvegardes, sans spammer le terminal.
+    with (dossier / "diagnostics.csv").open("w", newline="", encoding="utf-8") as f:
+        ecrivain = csv.DictWriter(
+            f, fieldnames=("epsilon", "seed", "reussite_finale", "diagnostic")
+        )
+        ecrivain.writeheader()
+        for epsilon, essais in resultats.items():
+            for essai in essais:
+                ecrivain.writerow({
+                    "epsilon": epsilon,
+                    "seed": essai[0]["seed"],
+                    "reussite_finale": essai[-1]["reussite"],
+                    "diagnostic": diagnostic_stabilite(essai),
+                })
+    print(f"6 graphes et 2 CSV enregistres dans : {dossier}")
     return resultats
 
 
