@@ -78,10 +78,13 @@ def creer_graphe(reussites, mode="distance", actions=9, dossier=None,
 
     fig, ax = plt.subplots(figsize=(9, 5), layout="constrained")
     # Succes et echecs bruts, sans moyenne, ni fenetre, ni interpolation lisse.
-    ax.step(episodes, valeurs, where="mid", linewidth=0.7, color="#1764B0")
+    # Chaque marqueur correspond a un episode, sans interpolation ni lissage.
     echecs = valeurs == 0
-    ax.scatter(episodes[echecs], valeurs[echecs], s=8, color="#C9363C",
-               label="Episodes echoues", zorder=3)
+    succes = ~echecs
+    ax.scatter(episodes[succes], valeurs[succes], s=12, marker="|",
+               color="#1764B0", label="Episodes reussis", zorder=2)
+    ax.scatter(episodes[echecs], valeurs[echecs], s=16, marker="|",
+               color="#C9363C", label="Episodes echoues", zorder=3)
     ax.set(
         title=(f"Reussite reelle par episode : epsilon = 0, "
                f"depart fixe ({angles[0]} deg, {angles[1]} deg)"),
@@ -91,8 +94,7 @@ def creer_graphe(reussites, mode="distance", actions=9, dossier=None,
     ax.set_yticks([0, 1], ["Echec (0)", "Reussite (1)"])
     ax.set(xlim=(1, len(reussites)), ylim=(-0.15, 1.15))
     ax.grid(alpha=0.25)
-    if np.any(echecs):
-        ax.legend()
+    ax.legend()
     image = dossier / "reussite_par_episode.png"
     fig.savefig(image, dpi=160)
     plt.close(fig)
