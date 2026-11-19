@@ -10,7 +10,9 @@ Lancer depuis la racine du depot :
     py -m experiences.reussite_epsilon_zero_depart_fixe
     py -m experiences.reussite_epsilon_zero_depart_fixe --episodes 5000
 
-Les donnees brutes (0 ou 1 par episode) sont aussi exportees en CSV.
+Les valeurs par episode (reussite 0/1, couverture cumulative,
+exploration effective) sont exportees dans un CSV. Aucun lissage, aucune
+moyenne glissante. Les cartes de l'agent final sont egalement produites.
 """
 
 import argparse
@@ -24,10 +26,12 @@ import numpy as np
 
 from experiences.graphes import config_bras, creer_agent, DOSSIER_RESULTATS
 from experiences.entrainement_bras_robotique import MODES_BRAS
+from src.visualisation import graphes as cartes
 
 
 def entrainer_et_mesurer(nb_episodes=5000, mode="distance", actions=9,
-                        seed=42, max_pas=50, angles=(180, 90)):
+                        seed=42, max_pas=50, angles=(180, 90),
+                        retourner_details=False):
     """Une seule Q-table et un depart fixe pour TOUS les episodes.
 
     Appeler apprendre() avec nb_episodes=1 ne reinitialise pas Q :
@@ -54,12 +58,25 @@ def entrainer_et_mesurer(nb_episodes=5000, mode="distance", actions=9,
     assert np.count_nonzero(agent.Q) == 0
 
     reussites = np.zeros(nb_episodes, dtype=int)
+    couvertures = np.zeros(nb_episodes, dtype=float)
+    explorations = np.zeros(nb_episodes, dtype=float)
+    etats_non_terminaux = np.asarray(env.etats_depart, dtype=int)
+    nb_couples = len(etats_non_terminaux) * env.nb_actions
     for i in range(nb_episodes):
         agent.apprendre()
-        # Le vrai etat final de cet episode, sans evaluation supplementaire.
+        # Vraie fin de l'episode : aucune evaluation sur d'autres positions.
         reussites[i] = int(env.distance_cible(env.etat) <= env.tolerance)
+        # Couverture cumulative EXACTE apres cet episode.
+        couvertures[i] = (
+            100.0 * np.count_nonzero(agent.mises_a_jour[etats_non_terminaux])
+            / nb_couples
+        )
+        # Fraction des actions aleatoires du meme episode (non cumulee).
+        explorations[i] = 100.0 * agent.taux_exploration[0]
         assert agent.epsilon == 0.0
 
+    if retourner_details:
+        return reussites, couvertures, explorations, agent, env
     return reussites
 
 
@@ -107,6 +124,48 @@ def creer_graphe(reussites, mode="distance", actions=9, dossier=None,
     return image, fichier_csv
 
 
+def tracer_autres_graphes(couvertures, explorations, agent, env,
+                         mode="distance", actions=9, angles=(180, 90)):
+    """Tracer les mesures brutes et les cartes issues DU MEME entrainement."""
+    dossier = (DOSSIER_RESULTATS / "bras_robotique" /
+               "epsilon_zero_depart_fixe" / f"{actions}_actions" / mode)
+    dossier.mkdir(parents=True, exist_ok=True)
+    episodes = np.arange(1, len(couvertures) + 1)
+    series = (
+        ("4_couverture.png", couvertures, "Couverture des couples (etat, action)",
+         "Couples essayes depuis le debut de l'entrainement (%)"),
+        ("5_exploration_effective.png", explorations,
+         "Exploration effective par episode",
+         "Actions tirees aleatoirement pendant cet episode (%)"),
+    )
+    for fichier, valeurs, titre, ylabel in series:
+        fig, ax = plt.subplots(figsize=(9, 5), layout="constrained")
+        # Les mesures sont EXACTES et relevees apres chaque episode.
+        ax.plot(episodes, valeurs, linewidth=1, color="#1764B0")
+        ax.set(
+            title=(f"{titre} - epsilon = 0, "
+                   f"depart fixe ({angles[0]} deg, {angles[1]} deg)"),
+            xlabel="Episode d'entrainement", ylabel=ylabel,
+        )
+        ax.set_xlim(1, len(episodes))
+        ax.set_ylim(0, max(1.0, float(np.max(valeurs)) * 1.05))
+        ax.grid(alpha=0.25)
+        fig.savefig(dossier / fichier, dpi=160)
+        plt.close(fig)
+
+    nom = (f"Bras robotique {mode} ({actions} actions), "
+           f"epsilon=0, depart fixe {tuple(angles)}")
+    cartes.graphe_cartes_q_brutes(agent, env, nom,
+                                 dossier / "3_cartes_q_brutes.png")
+    cartes.graphe_meilleure_action(agent, env, nom,
+                                  dossier / "4_meilleure_action.png")
+    cartes.graphe_visites(agent, env, nom,
+                          dossier / "6_visites.png")
+    cartes.graphe_passages_par_action(agent, env, nom,
+                                     dossier / "6b_passages_par_action.png")
+    return dossier
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--episodes", type=int, default=5000)
@@ -120,17 +179,33 @@ def main():
                         help="Angles initiaux fixes, en degres (defaut : 180 90).")
     args = parser.parse_args()
 
-    reussites = entrainer_et_mesurer(
+    reussites, couvertures, explorations, agent, env = entrainer_et_mesurer(
         nb_episodes=args.episodes, mode=args.mode, actions=args.actions,
-        seed=args.seed, max_pas=args.max_pas, angles=tuple(args.angles)
+        seed=args.seed, max_pas=args.max_pas, angles=tuple(args.angles),
+        retourner_details=True
     )
     image, csv_path = creer_graphe(
         reussites, mode=args.mode, actions=args.actions,
         angles=tuple(args.angles)
     )
+    dossier = tracer_autres_graphes(
+        couvertures, explorations, agent, env, mode=args.mode,
+        actions=args.actions, angles=tuple(args.angles)
+    )
+    # CSV exact, un enregistrement PAR EPISODE, non lisse.
+    with (dossier / "mesures_par_episode.csv").open(
+        "w", newline="", encoding="utf-8"
+    ) as fichier:
+        writer = csv.writer(fichier)
+        writer.writerow(("episode", "reussite_0_ou_1",
+                         "couverture_cumulative_pourcent",
+                         "exploration_episode_pourcent"))
+        writer.writerows(zip(
+            range(1, len(reussites) + 1),
+            reussites, couvertures, explorations
+        ))
     print(f"Depart fixe a chaque episode : {tuple(args.angles)} degres")
-    print(f"Graphique : {image}")
-    print(f"Donnees par episode : {csv_path}")
+    print(f"7 graphes et mesures CSV dans : {dossier}")
 
 
 if __name__ == "__main__":
