@@ -15,7 +15,6 @@ Attention : un plateau ne prouve pas la convergence mathematique.
 
 import argparse
 import csv
-import random
 from pathlib import Path
 
 import matplotlib
@@ -23,95 +22,39 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from experiences.graphes import DOSSIER_RESULTATS, config_bras, creer_agent, evaluer_politique
+from experiences.graphes import DOSSIER_RESULTATS, config_bras, creer_agent
 
 
 EPSILONS_PAR_DEFAUT = (0.0, 0.05, 0.1, 0.2, 0.5, 1.0)
 
 
 def experience(epsilon, seed, mode, actions, depart, episodes, pas, tests):
-    """Un entrainement independant, avec un epsilon constant."""
+    """Uniquement la couverture des couples et l'exploration effective."""
     config = config_bras(
         mode, actions, depart_aleatoire=(depart == "aleatoire"),
         epsilon=epsilon, epsilon_min=epsilon, decroissance=1.0,
         nb_episodes=episodes,
     )
     agent, env = creer_agent(config, seed)
-    assert np.all(agent.Q == 0), "Chaque essai doit commencer avec Q=0."
-
-    # Exactement les memes departs pour une graine, quel que soit epsilon.
-    departs_test = random.Random(seed + 10_000).sample(
-        env.etats_depart, k=min(tests, len(env.etats_depart))
-    )
-    etats_non_terminaux = np.asarray(env.etats_depart, dtype=int)
-    nb_couples = len(env.etats_depart) * env.nb_actions
+    assert np.all(agent.Q == 0)
+    couples = len(env.etats_depart) * env.nb_actions
     historique = []
-    politique_precedente = None
-    q_precedente = agent.Q.copy()
-
     try:
         for debut in range(0, episodes, pas):
             agent.nb_episodes = min(pas, episodes - debut)
-            agent.apprendre()  # Q est conservee entre appels.
-            if not np.allclose(agent.epsilons, epsilon):
-                raise AssertionError("Epsilon ne doit pas decroitre.")
-
-            bilan = evaluer_politique(agent, departs_test)
-            politique = np.argmax(agent.Q[etats_non_terminaux], axis=1)
-            changement_politique = (
-                float(100 * np.mean(politique != politique_precedente))
-                if politique_precedente is not None else None
-            )
-            amplitude_q = float(np.mean(np.abs(q_precedente)))
-            variation_q = (
-                float(100 * np.mean(np.abs(agent.Q - q_precedente)) / amplitude_q)
-                if amplitude_q > 1e-12 else None
-            )
-
+            agent.apprendre()
+            assert np.allclose(agent.epsilons, epsilon)
             historique.append({
-                "epsilon": epsilon,
-                "seed": seed,
+                "epsilon": epsilon, "seed": seed,
                 "episode": debut + agent.nb_episodes,
-                "reussite": float(bilan["taux_reussite"]),
-                "politique_changee": changement_politique,
-                "variation_q": variation_q,
-                "couverture": float(
-                    100 * np.count_nonzero(agent.mises_a_jour[etats_non_terminaux])
-                    / nb_couples
-                ),
-                "exploration_effective": float(100 * np.mean(agent.taux_exploration)),
-                "recompense_moyenne": float(np.mean(agent.recompenses)),
+                "couverture": 100.0 * np.count_nonzero(
+                    agent.mises_a_jour[env.etats_depart]
+                ) / couples,
+                "exploration_effective": 100.0 * np.mean(agent.taux_exploration),
             })
-            politique_precedente = politique.copy()
-            q_precedente = agent.Q.copy()
     finally:
         agent.nb_episodes = episodes
     return historique
-
-
-def diagnostic_stabilite(historique):
-    """Test empirique, PAS une preuve de convergence mathematique.
-
-    Sur les trois derniers points : evolution du succes <= 5 points,
-    politique changee <= 1 %, variation relative moyenne de Q <= 1 %.
-    On distingue stabilite et performance : stable peut etre sous-optimal.
-    """
-    if len(historique) < 4:
-        return "indetermine (moins de 4 evaluations)"
-    derniers = historique[-3:]
-    taux = [p["reussite"] for p in derniers]
-    changements = [p["politique_changee"] for p in derniers]
-    variations = [p["variation_q"] for p in derniers]
-    stable = (
-        max(taux) - min(taux) <= 5.0
-        and all(x is not None and x <= 1.0 for x in changements)
-        and all(x is not None and x <= 1.0 for x in variations)
-    )
-    if not stable:
-        return "stabilisation non constatee"
-    if min(taux) < 95:
-        return "stable sur les tests, mais reussite < 95 %"
-    return "stabilisation empirique avec reussite >= 95 %"
 
 
 def agreger(essais, champ):
@@ -159,33 +102,9 @@ def tracer_courbe(resultats, champ, titre, ylabel, chemin, borne_100=False):
     plt.close(fig)
 
 
-def tracer_bilan(resultats, chemin):
-    valeurs = list(resultats)
-    moyennes = []
-    ecarts = []
-    for epsilon in valeurs:
-        finaux = [essai[-1]["reussite"] for essai in resultats[epsilon]]
-        moyennes.append(float(np.mean(finaux)))
-        ecarts.append(float(np.std(finaux)))
-    fig, ax = plt.subplots(figsize=(8, 5), layout="constrained")
-    ax.errorbar(np.arange(len(valeurs)), moyennes, yerr=ecarts,
-                marker="o", capsize=4, linestyle="-")
-    ax.set(xticks=np.arange(len(valeurs)),
-           xticklabels=[f"{e:g}" for e in valeurs],
-           xlabel="Epsilon constant",
-           ylabel="Reussite finale (%)",
-           title="Taux de reussite final (moyenne +/- ecart-type)")
-    ax.set_ylim(0, 105)
-    ax.grid(alpha=0.3)
-    fig.savefig(chemin, dpi=150)
-    plt.close(fig)
-
-
 def sauvegarder_csv(resultats, chemin):
     champs = (
-        "epsilon", "seed", "episode", "reussite", "politique_changee",
-        "variation_q", "couverture", "exploration_effective",
-        "recompense_moyenne",
+        "epsilon", "seed", "episode", "couverture", "exploration_effective",
     )
     with chemin.open("w", newline="", encoding="utf-8") as fichier:
         ecrivain = csv.DictWriter(fichier, fieldnames=champs)
