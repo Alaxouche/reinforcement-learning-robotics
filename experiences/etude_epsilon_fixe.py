@@ -1,16 +1,10 @@
-"""Comparer plusieurs epsilon fixes pour le bras robotique et suivre la convergence.
+"""Comparer uniquement deux indicateurs d'exploration pour epsilon constant.
 
-Depuis la racine du depot :
-    py -m experiences.etude_epsilon_fixe
-    py -m experiences.etude_epsilon_fixe --epsilons 0 0.05 0.1 0.2 0.5 1 --episodes 5000
-    py -m experiences.etude_epsilon_fixe --actions 4 --mode smart --depart fixe
+Lancement depuis la racine : py -m experiences.etude_epsilon_fixe
 
-La Q-table est remise a zero au debut de CHAQUE essai (epsilon, graine).
-Pendant un essai, Q est conservee entre les blocs d'episodes.
-L'evaluation est gloutonne (sans exploration) sur les memes departs de test
-pour tous les epsilon d'une meme graine.
-
-Attention : un plateau ne prouve pas la convergence mathematique.
+Chaque (epsilon, graine) repart d'une Q-table nulle. Les figures conservees :
+4_couverture.png et 5_exploration_effective.png. La reussite, la variation
+de Q et le bilan final ne sont plus traces dans cette experience.
 """
 
 import argparse
