@@ -1,0 +1,263 @@
+"""Comparer plusieurs epsilon fixes pour le bras robotique et suivre la convergence.
+
+Depuis la racine du depot :
+    py -m experiences.etude_epsilon_fixe
+    py -m experiences.etude_epsilon_fixe --epsilons 0 0.05 0.1 0.2 0.5 1 --episodes 5000
+    py -m experiences.etude_epsilon_fixe --actions 4 --mode smart --depart fixe
+
+La Q-table est remise a zero au debut de CHAQUE essai (epsilon, graine).
+Pendant un essai, Q est conservee entre les blocs d'episodes.
+L'evaluation est gloutonne (sans exploration) sur les memes departs de test
+pour tous les epsilon d'une meme graine.
+
+Attention : un plateau ne prouve pas la convergence mathematique.
+"""
+
+import argparse
+import csv
+import random
+from pathlib import Path
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+
+from experiences.graphes import DOSSIER_RESULTATS, config_bras, creer_agent, evaluer_politique
+
+
+EPSILONS_PAR_DEFAUT = (0.0, 0.05, 0.1, 0.2, 0.5, 1.0)
+
+
+def experience(epsilon, seed, mode, actions, depart, episodes, pas, tests):
+    """Un entrainement independant, avec un epsilon constant."""
+    config = config_bras(
+        mode, actions, depart_aleatoire=(depart == "aleatoire"),
+        epsilon=epsilon, epsilon_min=epsilon, decroissance=1.0,
+        nb_episodes=episodes,
+    )
+    agent, env = creer_agent(config, seed)
+    assert np.all(agent.Q == 0), "Chaque essai doit commencer avec Q=0."
+
+    # Exactement les memes departs pour une graine, quel que soit epsilon.
+    departs_test = random.Random(seed + 10_000).sample(
+        env.etats_depart, k=min(tests, len(env.etats_depart))
+    )
+    etats_non_terminaux = np.asarray(env.etats_depart, dtype=int)
+    nb_couples = len(env.etats_depart) * env.nb_actions
+    historique = []
+    politique_precedente = None
+    q_precedente = agent.Q.copy()
+
+    try:
+        for debut in range(0, episodes, pas):
+            agent.nb_episodes = min(pas, episodes - debut)
+            agent.apprendre()  # Q est conservee entre appels.
+            if not np.allclose(agent.epsilons, epsilon):
+                raise AssertionError("Epsilon ne doit pas decroitre.")
+
+            bilan = evaluer_politique(agent, departs_test)
+            politique = np.argmax(agent.Q[etats_non_terminaux], axis=1)
+            changement_politique = (
+                float(100 * np.mean(politique != politique_precedente))
+                if politique_precedente is not None else None
+            )
+            amplitude_q = float(np.mean(np.abs(q_precedente)))
+            variation_q = (
+                float(100 * np.mean(np.abs(agent.Q - q_precedente)) / amplitude_q)
+                if amplitude_q > 1e-12 else None
+            )
+
+            historique.append({
+                "epsilon": epsilon,
+                "seed": seed,
+                "episode": debut + agent.nb_episodes,
+                "reussite": float(bilan["taux_reussite"]),
+                "politique_changee": changement_politique,
+                "variation_q": variation_q,
+                "couverture": float(
+                    100 * np.count_nonzero(agent.mises_a_jour[etats_non_terminaux])
+                    / nb_couples
+                ),
+                "exploration_effective": float(100 * np.mean(agent.taux_exploration)),
+                "recompense_moyenne": float(np.mean(agent.recompenses)),
+            })
+            politique_precedente = politique.copy()
+            q_precedente = agent.Q.copy()
+    finally:
+        agent.nb_episodes = episodes
+    return historique
+
+
+def diagnostic_stabilite(historique):
+    """Test empirique, PAS une preuve de convergence mathematique.
+
+    Sur les trois derniers points : evolution du succes <= 5 points,
+    politique changee <= 1 %, variation relative moyenne de Q <= 1 %.
+    On distingue stabilite et performance : stable peut etre sous-optimal.
+    """
+    if len(historique) < 4:
+        return "indetermine (moins de 4 evaluations)"
+    derniers = historique[-3:]
+    taux = [p["reussite"] for p in derniers]
+    changements = [p["politique_changee"] for p in derniers]
+    variations = [p["variation_q"] for p in derniers]
+    stable = (
+        max(taux) - min(taux) <= 5.0
+        and all(x is not None and x <= 1.0 for x in changements)
+        and all(x is not None and x <= 1.0 for x in variations)
+    )
+    if not stable:
+        return "stabilisation non constatee"
+    if min(taux) < 95:
+        return "stable sur les tests, mais reussite < 95 %"
+    return "stabilisation empirique avec reussite >= 95 %"
+
+
+def agreger(essais, champ):
+    """Moyenne et ecart-type inter-graines, dans l'ordre des evaluations."""
+    valeurs = np.array([
+        [np.nan if p[champ] is None else p[champ] for p in essai]
+        for essai in essais
+    ], dtype=float)
+    episodes = np.array([p["episode"] for p in essais[0]], dtype=int)
+    valides = ~np.all(np.isnan(valeurs), axis=0)
+    x = episodes[valides]
+    if not np.any(valides):
+        return x, np.array([]), np.array([])
+    y = valeurs[:, valides]
+    return x, np.mean(y, axis=0), np.std(y, axis=0)
+
+
+def tracer_courbe(resultats, champ, titre, ylabel, chemin, borne_100=False):
+    fig, ax = plt.subplots(figsize=(9, 5), layout="constrained")
+    for epsilon, essais in resultats.items():
+        x, moyenne, ecart = agreger(essais, champ)
+        if len(x) == 0:
+            continue
+        ligne, = ax.plot(x, moyenne, marker="o", markersize=2.5,
+                         label=f"epsilon = {epsilon:g}")
+        ax.fill_between(x, moyenne - ecart, moyenne + ecart,
+                        alpha=0.12, color=ligne.get_color())
+    ax.set(xlabel="Episodes", ylabel=ylabel, title=titre)
+    if borne_100:
+        ax.set_ylim(0, 105)
+    ax.grid(alpha=0.3)
+    ax.legend()
+    fig.savefig(chemin, dpi=150)
+    plt.close(fig)
+
+
+def tracer_bilan(resultats, chemin):
+    valeurs = list(resultats)
+    moyennes = []
+    ecarts = []
+    for epsilon in valeurs:
+        finaux = [essai[-1]["reussite"] for essai in resultats[epsilon]]
+        moyennes.append(float(np.mean(finaux)))
+        ecarts.append(float(np.std(finaux)))
+    fig, ax = plt.subplots(figsize=(8, 5), layout="constrained")
+    ax.errorbar(np.arange(len(valeurs)), moyennes, yerr=ecarts,
+                marker="o", capsize=4, linestyle="-")
+    ax.set(xticks=np.arange(len(valeurs)),
+           xticklabels=[f"{e:g}" for e in valeurs],
+           xlabel="Epsilon constant",
+           ylabel="Reussite finale (%)",
+           title="Taux de reussite final (moyenne +/- ecart-type)")
+    ax.set_ylim(0, 105)
+    ax.grid(alpha=0.3)
+    fig.savefig(chemin, dpi=150)
+    plt.close(fig)
+
+
+def sauvegarder_csv(resultats, chemin):
+    champs = (
+        "epsilon", "seed", "episode", "reussite", "politique_changee",
+        "variation_q", "couverture", "exploration_effective",
+        "recompense_moyenne",
+    )
+    with chemin.open("w", newline="", encoding="utf-8") as fichier:
+        ecrivain = csv.DictWriter(fichier, fieldnames=champs)
+        ecrivain.writeheader()
+        for essais in resultats.values():
+            for essai in essais:
+                ecrivain.writerows(essai)
+
+
+def etudier(epsilons=EPSILONS_PAR_DEFAUT, seeds=(42, 43, 44),
+            mode="distance", actions=9, depart="aleatoire",
+            episodes=5000, pas=250, tests=100):
+    if not epsilons or not seeds:
+        raise ValueError("Prevoir au moins un epsilon et une graine.")
+    if any(not np.isfinite(e) or not 0 <= e <= 1 for e in epsilons):
+        raise ValueError("Chaque epsilon doit etre dans [0, 1].")
+    if episodes <= 0 or pas <= 0 or tests <= 0:
+        raise ValueError("episodes, pas et tests doivent etre positifs.")
+
+    dossier = (DOSSIER_RESULTATS / "bras_robotique" / "epsilon_fixe"
+               / f"{actions}_actions" / mode / depart)
+    dossier.mkdir(parents=True, exist_ok=True)
+    resultats = {}
+
+    for epsilon in dict.fromkeys(epsilons):
+        essais = []
+        for seed in seeds:
+            print(f"Entrainement : epsilon={epsilon:g}, graine={seed} ...", flush=True)
+            essais.append(experience(
+                epsilon, seed, mode, actions, depart, episodes, pas, tests
+            ))
+        resultats[epsilon] = essais
+
+    figures = (
+        ("reussite", "Reussite gloutonne sur les departs de test",
+         "Reussite (%)", "1_reussite.png", True),
+        ("politique_changee", "Etats dont la meilleure action a change",
+         "Politique modifiee depuis le bloc precedent (%)",
+         "2_stabilite_politique.png", True),
+        ("variation_q", "Variation relative moyenne des Q-values",
+         "Variation de Q depuis le bloc precedent (%)",
+         "3_variation_q.png", False),
+        ("couverture", "Couverture des couples (etat, action)",
+         "Couples essayes (%)", "4_couverture.png", True),
+        ("exploration_effective", "Exploration effective pendant l'entrainement",
+         "Actions tirees au hasard (%)", "5_exploration_effective.png", True),
+    )
+    for champ, titre, axe_y, nom, borne in figures:
+        tracer_courbe(resultats, champ, titre, axe_y, dossier / nom, borne)
+    tracer_bilan(resultats, dossier / "6_bilan_final.png")
+    sauvegarder_csv(resultats, dossier / "mesures.csv")
+
+    print("\nBILAN : diagnostic par epsilon et par graine")
+    for epsilon, essais in resultats.items():
+        taux = np.mean([e[-1]["reussite"] for e in essais])
+        ecart = np.std([e[-1]["reussite"] for e in essais])
+        print(f"epsilon={epsilon:g} : reussite finale {taux:.1f} +/- {ecart:.1f} %")
+        for essai in essais:
+            print(f"  graine {essai[0]['seed']} : {diagnostic_stabilite(essai)}")
+    print(f"\n6 graphes et mesures.csv dans : {dossier}")
+    print("Le diagnostic porte sur des points de mesure finis ; il ne prouve pas")
+    print("la convergence theorique ni l'optimalite de la politique.")
+    return resultats
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--epsilons", nargs="+", type=float,
+                        default=list(EPSILONS_PAR_DEFAUT))
+    parser.add_argument("--seeds", nargs="+", type=int, default=[42, 43, 44])
+    parser.add_argument("--mode", choices=("naive", "smart", "distance"),
+                        default="distance")
+    parser.add_argument("--actions", type=int, choices=(4, 9), default=9)
+    parser.add_argument("--depart", choices=("fixe", "aleatoire"),
+                        default="aleatoire")
+    parser.add_argument("--episodes", type=int, default=5000)
+    parser.add_argument("--pas-evaluation", type=int, default=250)
+    parser.add_argument("--tests", type=int, default=100)
+    args = parser.parse_args()
+    etudier(epsilons=tuple(args.epsilons), seeds=tuple(args.seeds),
+            mode=args.mode, actions=args.actions, depart=args.depart,
+            episodes=args.episodes, pas=args.pas_evaluation, tests=args.tests)
+
+
+if __name__ == "__main__":
+    main()
