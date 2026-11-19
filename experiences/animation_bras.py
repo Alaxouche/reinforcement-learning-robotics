@@ -34,7 +34,7 @@ from src.algorithmes.q_learning import QLearning
 
 
 def creer_agent(mode="distance", nb_actions=9, episodes=5000, seed=42,
-                charger_q=None, enregistrer_q=None):
+                charger_q=None, enregistrer_q=None, entrainer=True):
     """Entraîne un agent ou charge une Q-table déjà apprise (jamais une Q fictive)."""
     if episodes <= 0:
         raise ValueError("Le nombre d'épisodes doit être strictement positif.")
@@ -50,7 +50,7 @@ def creer_agent(mode="distance", nb_actions=9, episodes=5000, seed=42,
             raise ValueError(f"Q-table attendue : {agent.Q.shape}, "
                              f"reçue : {table.shape} (valeurs finies requises).")
         agent.Q = np.array(table, dtype=float, copy=True)
-    else:
+    elif entrainer:
         agent.apprendre()
     if enregistrer_q is not None:
         destination = Path(enregistrer_q)

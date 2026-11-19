@@ -66,3 +66,31 @@ py -m experiences.animation_bras --sans-menu --gif --sans-fenetre
 
 Les GIF sont places par defaut dans `experiences/animations/`.
 Les Q-tables `.npy` et les GIF generes ne sont pas suivis par Git.
+
+## Deux courbes pour vérifier l'apprentissage
+
+Depuis la racine du dépôt :
+
+```bash
+py -m experiences.suivi_apprentissage
+```
+
+Le programme reprend les **mêmes paramètres de Q-learning et d'epsilon dynamique**
+que l'animation (9 actions, récompense distance et 5 000 épisodes par défaut).
+Il mesure au départ puis tous les **500 épisodes** :
+
+- Le **taux de réussite** sur **toutes les positions de départ non terminales**,
+  avec au plus 50 mouvements par position.
+- Le **nombre moyen de mouvements des trajets réussis** ; ce nombre n'est pas
+  défini tant qu'aucune position ne réussit.
+
+Pendant chaque évaluation, le robot applique exclusivement `argmax(Q)` :
+pas d'exploration, pas de mise à jour de Q. L'entraînement reprend ensuite
+**sans réinitialiser la Q-table ni epsilon**. Les deux graphiques s'affichent
+à l'écran, sans lissage et sans créer de dossier de résultats.
+
+Autre configuration :
+
+```bash
+py -m experiences.suivi_apprentissage --actions 4 --mode smart
+```
