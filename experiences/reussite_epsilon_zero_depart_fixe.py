@@ -8,7 +8,7 @@ de chaque episode d'entrainement, avec exactement le QLearning du projet.
 
 Lancer depuis la racine du depot :
     py -m experiences.reussite_epsilon_zero_depart_fixe
-    py -m experiences.reussite_epsilon_zero_depart_fixe --episodes 5000 --fenetre 100
+    py -m experiences.reussite_epsilon_zero_depart_fixe --episodes 5000
 
 Les donnees brutes (0 ou 1 par episode) sont aussi exportees en CSV.
 """
@@ -63,38 +63,36 @@ def entrainer_et_mesurer(nb_episodes=5000, mode="distance", actions=9,
     return reussites
 
 
-def moyenne_glissante(reussites, fenetre=100):
-    """Pourcentage sur les min(fenetre, episode) derniers episodes."""
-    if fenetre <= 0:
-        raise ValueError("La fenetre doit etre positive.")
-    reussites = np.asarray(reussites, dtype=int)
-    episodes = np.arange(1, len(reussites) + 1)
-    debut = np.maximum(episodes - fenetre, 0)
-    cumul = np.concatenate(([0], np.cumsum(reussites)))
-    return 100.0 * (cumul[episodes] - cumul[debut]) / (episodes - debut)
-
-
-def creer_graphe(reussites, fenetre=100, mode="distance", actions=9, dossier=None,
+def creer_graphe(reussites, mode="distance", actions=9, dossier=None,
                  angles=(180, 90)):
-    """Une figure : taux de reussite par episode, sans departs de test."""
+    """Un point par episode : 0=echec, 1=reussite, sans aucun lissage."""
     if dossier is None:
         dossier = (DOSSIER_RESULTATS / "bras_robotique" /
                    "epsilon_zero_depart_fixe" / f"{actions}_actions" / mode)
     dossier = Path(dossier)
     dossier.mkdir(parents=True, exist_ok=True)
-    taux = moyenne_glissante(reussites, fenetre)
     episodes = np.arange(1, len(reussites) + 1)
+    valeurs = np.asarray(reussites, dtype=int)
+    if not np.isin(valeurs, (0, 1)).all():
+        raise ValueError("La reussite par episode doit valoir 0 ou 1.")
 
     fig, ax = plt.subplots(figsize=(9, 5), layout="constrained")
-    ax.plot(episodes, taux, color="#1764B0", linewidth=2)
+    # Succes et echecs bruts, sans moyenne, ni fenetre, ni interpolation lisse.
+    ax.step(episodes, valeurs, where="mid", linewidth=0.7, color="#1764B0")
+    echecs = valeurs == 0
+    ax.scatter(episodes[echecs], valeurs[echecs], s=8, color="#C9363C",
+               label="Episodes echoues", zorder=3)
     ax.set(
-        title=(f"Reussite pendant l'entrainement : epsilon = 0, "
+        title=(f"Reussite reelle par episode : epsilon = 0, "
                f"depart fixe ({angles[0]} deg, {angles[1]} deg)"),
         xlabel="Episode d'entrainement",
-        ylabel=f"Reussite sur les {fenetre} derniers episodes (%)",
+        ylabel="Resultat de l'episode",
     )
-    ax.set(xlim=(1, len(reussites)), ylim=(-2, 102))
+    ax.set_yticks([0, 1], ["Echec (0)", "Reussite (1)"])
+    ax.set(xlim=(1, len(reussites)), ylim=(-0.15, 1.15))
     ax.grid(alpha=0.25)
+    if np.any(echecs):
+        ax.legend()
     image = dossier / "reussite_par_episode.png"
     fig.savefig(image, dpi=160)
     plt.close(fig)
@@ -102,16 +100,14 @@ def creer_graphe(reussites, fenetre=100, mode="distance", actions=9, dossier=Non
     fichier_csv = dossier / "reussite_par_episode.csv"
     with fichier_csv.open("w", newline="", encoding="utf-8") as fichier:
         writer = csv.writer(fichier)
-        writer.writerow(("episode", "reussite_episode_0_ou_1",
-                         "reussite_glissante_pourcent"))
-        writer.writerows(zip(episodes, reussites, taux))
+        writer.writerow(("episode", "reussite_episode_0_ou_1"))
+        writer.writerows(zip(episodes, valeurs))
     return image, fichier_csv
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--episodes", type=int, default=5000)
-    parser.add_argument("--fenetre", type=int, default=100)
     parser.add_argument("--mode", choices=("distance", "smart", "naive"),
                         default="distance")
     parser.add_argument("--actions", type=int, choices=(4, 9), default=9)
@@ -127,7 +123,7 @@ def main():
         seed=args.seed, max_pas=args.max_pas, angles=tuple(args.angles)
     )
     image, csv_path = creer_graphe(
-        reussites, fenetre=args.fenetre, mode=args.mode, actions=args.actions,
+        reussites, mode=args.mode, actions=args.actions,
         angles=tuple(args.angles)
     )
     print(f"Depart fixe a chaque episode : {tuple(args.angles)} degres")
