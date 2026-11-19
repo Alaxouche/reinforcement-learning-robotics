@@ -1,6 +1,8 @@
 """Tracer la reussite au cours des episodes d'ENTRAINEMENT.
 
-Cas etudie : epsilon=0, position initiale FIXE (90 degres, 0 degre).
+Cas etudie : epsilon=0, position initiale FIXE (180 degres, 90 degres).
+Depuis cette pose, le plus court chemin vers la cible necessite 18 actions
+(contre 9 depuis (90, 0)), sur le bras a 9 actions.
 Aucune evaluation sur d'autres positions : le succes est mesure a la FIN
 de chaque episode d'entrainement, avec exactement le QLearning du projet.
 
@@ -21,10 +23,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from experiences.graphes import config_bras, creer_agent, DOSSIER_RESULTATS
+from experiences.entrainement_bras_robotique import MODES_BRAS
 
 
 def entrainer_et_mesurer(nb_episodes=5000, mode="distance", actions=9,
-                        seed=42, max_pas=50):
+                        seed=42, max_pas=50, angles=(180, 90)):
     """Une seule Q-table et un depart fixe pour TOUS les episodes.
 
     Appeler apprendre() avec nb_episodes=1 ne reinitialise pas Q :
@@ -38,8 +41,15 @@ def entrainer_et_mesurer(nb_episodes=5000, mode="distance", actions=9,
         epsilon=0.0, epsilon_min=0.0, decroissance=1.0,
         nb_episodes=1, max_pas=max_pas
     )
+    # La position est choisie lors de la construction de l'environnement,
+    # afin que reset() recommence EXACTEMENT ici a chaque episode.
+    config["construire"] = lambda seed: MODES_BRAS[mode](
+        depart_aleatoire=False, angles_initiaux=tuple(angles),
+        seed=seed, nb_actions=actions,
+    )
     agent, env = creer_agent(config, seed)
-    assert env.angles(env.etat_initial) == (90, 0)
+    assert env.angles(env.etat_initial) == tuple(angles)
+    assert env.angles(env.reset()) == tuple(angles)
     assert not env.depart_aleatoire
     assert np.count_nonzero(agent.Q) == 0
 
@@ -64,7 +74,8 @@ def moyenne_glissante(reussites, fenetre=100):
     return 100.0 * (cumul[episodes] - cumul[debut]) / (episodes - debut)
 
 
-def creer_graphe(reussites, fenetre=100, mode="distance", actions=9, dossier=None):
+def creer_graphe(reussites, fenetre=100, mode="distance", actions=9, dossier=None,
+                 angles=(180, 90)):
     """Une figure : taux de reussite par episode, sans departs de test."""
     if dossier is None:
         dossier = (DOSSIER_RESULTATS / "bras_robotique" /
@@ -77,7 +88,8 @@ def creer_graphe(reussites, fenetre=100, mode="distance", actions=9, dossier=Non
     fig, ax = plt.subplots(figsize=(9, 5), layout="constrained")
     ax.plot(episodes, taux, color="#1764B0", linewidth=2)
     ax.set(
-        title="Reussite pendant l'entrainement : epsilon = 0, depart fixe (90 deg, 0 deg)",
+        title=(f"Reussite pendant l'entrainement : epsilon = 0, "
+               f"depart fixe ({angles[0]} deg, {angles[1]} deg)"),
         xlabel="Episode d'entrainement",
         ylabel=f"Reussite sur les {fenetre} derniers episodes (%)",
     )
@@ -105,15 +117,20 @@ def main():
     parser.add_argument("--actions", type=int, choices=(4, 9), default=9)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-pas", type=int, default=50)
+    parser.add_argument("--angles", nargs=2, type=int, default=[180, 90],
+                        metavar=("THETA1", "THETA2"),
+                        help="Angles initiaux fixes, en degres (defaut : 180 90).")
     args = parser.parse_args()
 
     reussites = entrainer_et_mesurer(
         nb_episodes=args.episodes, mode=args.mode, actions=args.actions,
-        seed=args.seed, max_pas=args.max_pas
+        seed=args.seed, max_pas=args.max_pas, angles=tuple(args.angles)
     )
     image, csv_path = creer_graphe(
-        reussites, fenetre=args.fenetre, mode=args.mode, actions=args.actions
+        reussites, fenetre=args.fenetre, mode=args.mode, actions=args.actions,
+        angles=tuple(args.angles)
     )
+    print(f"Depart fixe a chaque episode : {tuple(args.angles)} degres")
     print(f"Graphique : {image}")
     print(f"Donnees par episode : {csv_path}")
 
