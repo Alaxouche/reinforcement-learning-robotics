@@ -1,65 +1,71 @@
 # Reinforcement Learning Robotics
 
-## Comparer deux représentations des angles avec Keras
+## Comparaison de 4 méthodes avec Keras
 
-Le fichier experiences/reseau_bras.py compare **deux réseaux supervisés**
-sur exactement la **même Q-table** et les **mêmes 1294 états** du bras.
+Le programme experiences/reseau_bras.py entraîne **2 réseaux** avec
+la même meilleure Q-table obtenue précédemment, puis teste **2 politiques
+d'action pour chaque réseau**, donc **4 expériences** :
 
-- **Réseau A — angles** : les deux entrées sont theta1 et theta2,
-  divisées par 360 par une couche Keras Rescaling.
-- **Réseau B — trigo** : les quatre entrées sont cos(theta1),
-  sin(theta1), cos(theta2), sin(theta2).
+| Entrée du réseau | Méthode de sélection de l'action |
+| --- | --- |
+| 2 angles (theta1, theta2) | Argmax (action la plus probable) |
+| 2 angles (theta1, theta2) | Tirage selon les probabilités softmax |
+| 4 valeurs (cos1, sin1, cos2, sin2) | Argmax |
+| 4 valeurs (cos1, sin1, cos2, sin2) | Tirage selon les probabilités softmax |
 
-Les deux réseaux ont deux couches cachées Dense(64), neuf sorties
-softmax, le même nombre d'époques et les mêmes actions attendues :
-argmax de la meilleure Q-table à chaque état.
+Les angles directs sont divisés par 360 dans une couche Keras Rescaling.
+Les deux réseaux ont la même architecture cachée : 64 puis 64 neurones
+et 9 sorties softmax, et les mêmes 1294 exemples de Q-table.
 
-## D'où vient la Q-table ?
+**Important : on n'entraîne que 2 réseaux, pas 4.**
+Argmax et tirage s'appliquent aux mêmes probabilités de sortie.
 
-Si experiences/q_tables/meilleure_q_9.npy existe déjà sur ton ordinateur,
-le programme la charge directement : **il ne relance pas 50 Q-learning**.
+## Mesures
 
-Sinon, il reprend notre protocole :
-1. Faire 50 entraînements Q-learning indépendants (Q=0 au départ de
-   chacun), 5000 épisodes chacun, 9 actions, récompense distance.
-2. Après CHAQUE épisode, tester les 1294 positions de départ, sans
-   exploration et sans changer Q.
-3. En cas de trajet qui ne touche pas la cible en 50 mouvements, compter
-   51 mouvements de pénalité.
-4. À la FIN de chaque entraînement, conserver sa Q-table finale et sa
-   moyenne finale.
-5. Sélectionner parmi les 50 tables finales celle ayant la plus petite
-   moyenne pénalisée. Sauvegarder les 50 tables et la gagnante.
+- **Argmax** : tester la politique déterministe une fois sur les 1294 départs.
+- **Tirage probabiliste** : pour chaque état courant, tirer une action
+  selon les 9 probabilités du réseau. Le tirage est renouvelé à chaque pas.
+  Répéter ce test sur TOUS les 1294 départs **30 fois** (par défaut).
+- Pour chaque combinaison, afficher taux de réussite et nombre moyen de
+  mouvements, avec échec pénalisé à 51 après 50 mouvements.
+- Pour le tirage, afficher aussi l'écart-type des moyennes obtenues sur
+  les 30 répétitions.
+- Afficher pour chaque réseau un exemple de vecteur one-hot en sortie
+  avec argmax et avec tirage.
 
-## Exécuter
+Ces valeurs sont des résultats EMPIRIQUES sur les positions de la grille,
+qui ont également servi à entraîner les réseaux. Elles ne mesurent pas
+la généralisation à de nouveaux états.
 
-Depuis la racine du projet :
+## La Q-table utilisée
+
+Si experiences/q_tables/meilleure_q_9.npy existe déjà sur ton PC,
+le programme la recharge directement.
+
+Sinon, il la génère avec notre protocole d'origine :
+50 entraînements Q-learning indépendants, 5000 épisodes chacun ;
+test des 1294 départs après CHAQUE épisode ; comparaison de la moyenne
+FINALE de chaque Q-table ; sélection de la plus petite des 50 moyennes
+finales. Échec = coût 51 après 50 mouvements.
+
+Les 50 Q-tables et leurs scores sont enregistrés dans
+experiences/q_tables/50_q_tables.npz, et la meilleure dans
+experiences/q_tables/meilleure_q_9.npy.
+
+## Utilisation
 
     py -m pip install -r requirements.txt
+    git pull origin main
     py -m experiences.reseau_bras
 
-Le programme affiche pour chaque réseau :
-- Le pourcentage d'actions conformes à la Q-table ;
-- Le taux de réussite sur les 1294 départs ;
-- Le nombre moyen de mouvements pénalisé sur ces départs ;
-- Un exemple de vecteur one-hot de neuf 0 et 1.
-
-Il sauvegarde les modèles dans :
+Les modèles sont sauvegardés dans :
 - experiences/modeles_reseau/bras_angles.keras
 - experiences/modeles_reseau/bras_trigo.keras
 
-Ces fichiers sont ignorés par Git et restent sur ton PC.
-Les paramètres modifiables en haut du fichier :
-NB_ESSAIS=50, NB_EPISODES=5000, NB_EPOQUES_RESEAU=200,
-THETA1=180 et THETA2=90.
+Modifier les constantes au début de experiences/reseau_bras.py :
+NB_ESSAIS, NB_EPISODES, NB_EPOQUES_RESEAU, NB_REPETITIONS, THETA1, THETA2.
 
-Attention : les 1294 positions d'évaluation du réseau sont aussi
-les exemples d'entraînement. Le test vérifie l'imitation de la Q-table
-sur la grille connue, pas la généralisation à des états inédits.
-Le plus faible coût moyen mesuré servira de base à la comparaison,
-mais l'avantage d'une représentation n'est pas connu avant l'exécution.
-
-## Q-learning historique, inchangé
+## Q-learning historique (inchangé)
 
     py -m experiences.suivi_apprentissage
     py -m experiences.animation_bras

@@ -20,6 +20,7 @@ from experiences.suivi_apprentissage import (
 NB_ESSAIS = 50
 NB_EPISODES = 5000
 NB_EPOQUES_RESEAU = 200
+NB_REPETITIONS = 30  # Nombre de tests complets pour les tirages aléatoires.
 THETA1, THETA2 = 180, 90
 
 DOSSIER_Q = Path("experiences/q_tables")
@@ -119,7 +120,49 @@ dossier_modeles = Path("experiences/modeles_reseau")
 dossier_modeles.mkdir(parents=True, exist_ok=True)
 resultats = []
 
-# 3. Même étiquettes, deux réseaux distincts avec les mêmes couches cachées.
+# 3. Évaluer un choix ALÉATOIRE selon les probabilités du réseau.
+def tester_tirage(probabilites, repetitions=NB_REPETITIONS):
+    """Rejouer tous les départs, plusieurs fois car les actions sont aléatoires."""
+    rng = np.random.default_rng(2026)
+    table_transitions = np.asarray(transitions)
+    cibles = np.array(env.etats_objectif)
+    moyennes = []
+    total_reussites = 0
+
+    for _ in range(repetitions):
+        etats = np.array(env.etats_depart)
+        couts = np.full(len(etats), agent.max_pas + 1)
+        actifs = np.ones(len(etats), dtype=bool)
+
+        for pas in range(1, agent.max_pas + 1):
+            indices = np.flatnonzero(actifs)
+            if len(indices) == 0:
+                break
+
+            # À CHAQUE mouvement, on tire une action suivant softmax.
+            cumul = np.cumsum(probabilites[etats[indices]], axis=1)
+            cumul[:, -1] = 1.0
+            tirages = rng.random(len(indices))
+            actions = np.argmax(tirages[:, None] < cumul, axis=1)
+            etats[indices] = table_transitions[etats[indices], actions]
+
+            arrives = np.isin(etats[indices], cibles)
+            couts[indices[arrives]] = pas
+            actifs[indices[arrives]] = False
+
+        total_reussites += np.sum(~actifs)
+        moyennes.append(np.mean(couts))
+
+    taux = 100 * total_reussites / (len(env.etats_depart) * repetitions)
+    return taux, float(np.mean(moyennes)), float(np.std(moyennes))
+
+
+# 4. Entraîner les 2 réseaux, puis tester les 2 choix sur chacun.
+print("\nComparaison : entrées (2 ou 4) × choix (argmax ou tirage)")
+n_q, total, taux_q, cout_q = evaluer_globalement(agent, transitions)
+print(f"Q-table de référence : {n_q}/{total} réussites | "
+      f"moyenne pénalisée {cout_q:.3f}")
+
 for nom, X, X_tous in comparaisons:
     keras.utils.set_random_seed(42)
     reseau = keras.Sequential()
@@ -135,39 +178,54 @@ for nom, X, X_tous in comparaisons:
                    metrics=["accuracy"])
     reseau.fit(X, y, epochs=NB_EPOQUES_RESEAU, batch_size=64, verbose=0)
 
-    # Accord avec les actions de la Q-table choisie.
-    actions_apprises = reseau.predict(X, verbose=0).argmax(axis=1)
-    accord = 100 * np.mean(actions_apprises == y)
+    # Dans les deux méthodes, le réseau renvoie les MÊMES probabilités.
+    probas_tous = reseau.predict(X_tous, verbose=0)
+    accord = 100 * np.mean(np.argmax(probas_tous[departs], axis=1) == y)
 
-    # Tester réellement les déplacements du réseau sur les 1294 départs.
-    actions_tous = reseau.predict(X_tous, verbose=0).argmax(axis=1)
-    n, total, taux, cout = evaluer_globalement(
-        agent, transitions, actions_politique=actions_tous
+    # Méthode 1 : action la plus probable, toujours la même pour un état.
+    actions_argmax = np.argmax(probas_tous, axis=1)
+    n, total, taux_argmax, cout_argmax = evaluer_globalement(
+        agent, transitions, actions_politique=actions_argmax
     )
-    resultats.append((nom, accord, taux, cout))
+    resultats.append((nom, "argmax", taux_argmax, cout_argmax, None))
+
+    # Méthode 2 : tirage selon les probabilités, renouvelé à chaque mouvement.
+    taux_tirage, cout_tirage, ecart = tester_tirage(probas_tous)
+    resultats.append((nom, "tirage", taux_tirage, cout_tirage, ecart))
+
     reseau.save(dossier_modeles / f"bras_{nom}.keras")
 
-    # Prédire un vecteur 0/1 pour la position souhaitée.
+    print(f"\nRéseau {nom} : accord avec Q = {accord:.1f}%")
+    print(f"  Argmax : {taux_argmax:.2f}% réussites | moyenne {cout_argmax:.3f}")
+    print(f"  Tirage : {taux_tirage:.2f}% réussites | "
+          f"moyenne {cout_tirage:.3f} (écart-type {ecart:.3f}, "
+          f"{NB_REPETITIONS} répétitions)")
+
+    # Un exemple pour les DEUX façons de choisir une action.
     if (THETA1, THETA2) not in [env.angles(s) for s in env.etats_objectif]:
         position = np.array([[THETA1, THETA2]], dtype="float32")
         if nom == "trigo":
             position = transformer_angles(position)
-        action = int(np.argmax(reseau.predict(position, verbose=0)[0]))
-        vecteur = [0] * 9
-        vecteur[action] = 1
-        print(f"Réseau {nom} : {accord:.1f}% d'accord avec Q | "
-              f"{n}/{total} réussites | moyenne {cout:.3f}")
-        print(f"  Position ({THETA1}, {THETA2}) -> {vecteur}")
-    else:
-        print(f"Réseau {nom} : {accord:.1f}% d'accord avec Q | "
-              f"{n}/{total} réussites | moyenne {cout:.3f}")
+        probas = reseau.predict(position, verbose=0)[0].astype(float)
+        probas = probas / probas.sum()
 
-# 4. Comparer les résultats sur la même Q-table et les mêmes 1294 départs.
-print("\nComparaison des deux réseaux :")
-print("Entrées             Accord Q    Réussite    Coût moyen pénalisé")
-for nom, accord, taux, cout in resultats:
-    print(f"{nom:<19} {accord:>6.1f}%     {taux:>6.2f}%    {cout:>8.3f}")
+        action_max = int(np.argmax(probas))
+        action_tiree = int(np.random.default_rng(42).choice(9, p=probas))
+        print(f"  État ({THETA1}, {THETA2})")
+        print(f"  Probabilités : {np.round(probas, 3)}")
+        for methode, action in [("argmax", action_max), ("tirage", action_tiree)]:
+            vecteur = [0] * 9
+            vecteur[action] = 1
+            print(f"  {methode} -> {vecteur} | action {action}")
 
-# Afficher les deux graphiques Q-learning si on vient d'entraîner les 50 Q-tables.
+# 5. Tableau récapitulatif des 4 méthodes sur les mêmes départs.
+print("\nCOMPARAISON DES 4 MÉTHODES")
+print("Entrée   Choix     Réussites     Coût moyen   Écart-type")
+for nom, methode, taux, cout, ecart in resultats:
+    ecart_texte = "-" if ecart is None else f"{ecart:.3f}"
+    print(f"{nom:<8} {methode:<9} {taux:>7.2f}%      "
+          f"{cout:>8.3f}     {ecart_texte}")
+
+# Afficher les graphiques Q-learning si l'on a généré les 50 Q-tables.
 if historique_meilleur is not None:
     tracer(historique_meilleur, agent.max_pas, "distance", 9)
