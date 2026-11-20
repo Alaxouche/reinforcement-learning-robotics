@@ -1,91 +1,74 @@
-"""Réseau supervisé simple : position du bras -> vecteur 0/1 de l'action.
-Aucune classe personnelle, aucune Q-table, aucun DQN.
-"""
+"""Réseau Keras supervisé : deux angles en entrée, une action en sortie."""
 
 import numpy as np
 import keras
 
-# Les 9 actions de notre bras : variations de theta1 et theta2 (pas de 10°).
+# Chaque action change les angles de +10°, -10° ou 0°.
 actions = [
     (1, 0), (-1, 0), (0, 1), (0, -1),
-    (1, 1), (1, -1), (-1, 1), (-1, -1), (0, 0),
+    (1, 1), (1, -1), (-1, 1), (-1, -1), (0, 0)
 ]
 
-# Les deux poses qui atteignent la cible (1,1), en indices de 10°.
-cibles = [(0, 9), (9, 27)]
+# Les deux configurations qui atteignent la cible de notre bras.
+cibles = [(0, 90), (90, 270)]
 
 
-def distance(i, j, cible):
-    """Nombre minimal de mouvements vers cette cible avec les 9 actions."""
-    a, b = cible
-    d1 = abs(i - a)
-    d2 = abs(j - b)
-    return max(min(d1, 36 - d1), min(d2, 36 - d2))
+def cout(theta1, theta2):
+    """Écart minimal à une cible, en degrés, avec rotations circulaires."""
+    distances = []
+    for a, b in cibles:
+        d1 = abs(theta1 - a)
+        d2 = abs(theta2 - b)
+        distances.append(max(min(d1, 360 - d1), min(d2, 360 - d2)))
+    return min(distances)
 
 
-def direction(depart, arrivee):
-    """Retourner -1, 0 ou +1 pour tourner vers l'angle voulu."""
-    ecart = (arrivee - depart) % 36
-    if ecart == 0:
-        return 0
-    return 1 if ecart <= 18 else -1
-
-
-def entree(i, j):
-    """Transformer deux angles en quatre nombres pour le réseau."""
-    a = np.deg2rad(i * 10)
-    b = np.deg2rad(j * 10)
-    return [np.cos(a), np.sin(a), np.cos(b), np.sin(b)]
-
-
-# 1) Fabriquer les exemples : état -> action d'un trajet optimal.
+# 1. Construire les exemples : position du bras -> meilleure action.
 X = []
 y = []
-for i in range(36):
-    for j in range(36):
-        if (i, j) in cibles:
-            continue  # Déjà sur la cible : pas d'action nécessaire.
-        cible = min(cibles, key=lambda c: distance(i, j, c))
-        mouvement = (direction(i, cible[0]), direction(j, cible[1]))
-        X.append(entree(i, j))
-        y.append(actions.index(mouvement))
+for theta1 in range(0, 360, 10):
+    for theta2 in range(0, 360, 10):
+        if (theta1, theta2) in cibles:
+            continue
+
+        # Tester les 9 mouvements ; garder celui laissant le moins à parcourir.
+        scores = []
+        for d1, d2 in actions:
+            nouveau1 = (theta1 + 10 * d1) % 360
+            nouveau2 = (theta2 + 10 * d2) % 360
+            scores.append(cout(nouveau1, nouveau2))
+
+        X.append([theta1, theta2])
+        y.append(np.argmin(scores))
 
 X = np.array(X, dtype="float32")
-Y = np.eye(9, dtype="float32")[y]  # Une seule case à 1 par exemple.
+y = np.array(y, dtype="int32")
 
-# 2) Construire et entraîner le réseau avec Keras.
+# 2. Entraîner un réseau simple. Il reçoit directement (theta1, theta2).
 reseau = keras.Sequential([
-    keras.Input(shape=(4,)),
+    keras.Input(shape=(2,)),
+    keras.layers.Rescaling(1 / 360),  # Ramener 0..350 dans l'intervalle 0..1.
     keras.layers.Dense(64, activation="relu"),
     keras.layers.Dense(64, activation="relu"),
     keras.layers.Dense(9, activation="softmax"),
 ])
-reseau.compile(
-    optimizer="adam",
-    loss="categorical_crossentropy",
-    metrics=["accuracy"],
-)
-reseau.fit(X, Y, epochs=200, batch_size=64, verbose=0)
+reseau.compile(optimizer="adam", loss="sparse_categorical_crossentropy",
+               metrics=["accuracy"])
+reseau.fit(X, y, epochs=200, batch_size=64, verbose=0)
 
-# 3) Tester le réseau sur une position. Modifie ces deux nombres si besoin.
-theta1, theta2 = 180, 90
-i, j = theta1 // 10, theta2 // 10
-
-if (i, j) in cibles:
-    print("La cible est déjà atteinte : aucune action nécessaire.")
+# 3. Donner les angles au réseau et convertir son choix en vecteur de 0 et 1.
+theta1, theta2 = 180, 90  # Change ces deux angles pour essayer un autre état.
+if (theta1, theta2) in cibles:
+    print("Le bras est déjà sur la cible.")
 else:
-    probabilites = reseau.predict(
-        np.array([entree(i, j)], dtype="float32"), verbose=0
-    )[0]
-    indice = int(np.argmax(probabilites))
-    sortie = [0] * 9
-    sortie[indice] = 1
-
+    scores = reseau.predict(np.array([[theta1, theta2]], dtype="float32"), verbose=0)[0]
+    numero = int(np.argmax(scores))
+    vecteur = [0] * 9
+    vecteur[numero] = 1
     print("Position :", (theta1, theta2))
-    print("Vecteur prédit :", sortie)
-    print("Action choisie :", indice, "->", actions[indice])
+    print("Vecteur 0/1 :", vecteur)
+    print("Action choisie :", actions[numero])
 
-# Vérification sur les mêmes positions que l'entraînement.
 predictions = reseau.predict(X, verbose=0).argmax(axis=1)
-print("Accord avec les exemples d'entraînement :",
-      f"{100 * np.mean(predictions == np.array(y)):.1f} %")
+print("Accord sur les exemples d'entraînement :",
+      f"{100*np.mean(predictions == y):.1f}%")

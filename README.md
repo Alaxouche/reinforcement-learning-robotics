@@ -1,43 +1,43 @@
 # Reinforcement Learning Robotics
 
-Deux approches distinctes sur le même bras robotique :
+## Réseau Keras supervisé (version simple)
 
-- Q-learning tabulaire : src/algorithmes/q_learning.py et experiences/suivi_apprentissage.py.
-- Réseau de neurones supervisé simple en Keras : experiences/reseau_bras.py.
+Le fichier experiences/reseau_bras.py est indépendant du Q-learning
+précédent. Il reprend seulement le même bras (deux angles, neuf actions
+et la cible). Aucun code orienté objet personnel.
 
-Le réseau est indépendant du code Q-learning : aucune Q-table, récompense,
-ni import de l'ancien environnement. Il reprend seulement la même grille
-d'angles (10 degrés), les 9 actions et la même cible.
-
-## Utilisation
-
-Depuis la racine du dépôt :
+Installer et exécuter depuis la racine du dépôt :
 
     py -m pip install -r requirements.txt
     py -m experiences.reseau_bras
 
-Modifier la ligne theta1, theta2 = 180, 90 à la fin du script pour
-tester une autre position.
+Pour tester un autre état, modifier simplement à la fin du fichier :
 
-## Comment cela marche
+    theta1, theta2 = 180, 90
 
-1. Générer les 1294 positions qui ne touchent pas encore la cible.
-2. Calculer pour chacune une action appartenant à un plus court chemin.
-3. Construire les couples d'exemples (position, action one-hot).
-4. Entraîner le modèle Keras Sequential avec Dense(64), Dense(64)
-   et Dense(9, activation="softmax").
-5. Choisir la plus grande sortie avec argmax et afficher un vecteur
-   de neuf 0 et 1 avec un seul 1, par exemple [0,0,0,0,0,0,0,1,0].
+Le réseau reçoit **directement deux nombres**, les deux angles en degrés
+(theta1, theta2). Aucune transformation en sinus/cosinus : Keras les divise
+seulement par 360 dans une couche Rescaling interne (pour faciliter
+l'apprentissage, sans changer le nombre d'entrées).
 
-Aucune classe Python personnelle, pas de DQN, pas de Q-table.
-Les deux poses cibles sont (0°,90°) et (90°,270°) dans le bras initial.
-Le réseau ne découvre pas l'action optimale : il imite les étiquettes
-calculées. Il peut faire des erreurs.
+Apprentissage supervisé, en trois étapes :
 
-Le pourcentage d'accord affiché est mesuré sur les états de l'entraînement :
-il ne prouve pas une capacité de généralisation.
+1. Pour chaque position de notre grille (de 0 à 350 degrés par 10 degrés),
+   tester les neuf mouvements possibles et retenir celui qui minimise
+   le nombre de mouvements restant vers l'une des deux poses cibles.
+   En cas d'ex aequo, on choisit la première action de la liste.
+2. Entraîner un petit réseau Sequential : deux entrées, deux couches
+   Dense(64) et neuf sorties softmax, avec les indices d'actions corrects.
+3. Donner deux angles au réseau ; choisir l'indice avec argmax, puis afficher
+   un vecteur de neuf 0 et 1 contenant un seul 1 à cet indice.
 
-## Q-learning classique conservé
+La dernière couche produit des probabilités ; le vecteur 0/1 est obtenu
+après argmax. Une prédiction du réseau n'est pas garantie optimale.
+
+Le pourcentage d'accord final est mesuré sur les mêmes positions que
+l'entraînement : ce n'est pas une évaluation sur de nouvelles données.
+
+## Ancien Q-learning, conservé séparément
 
     py -m experiences.suivi_apprentissage
     py -m experiences.animation_bras
