@@ -39,7 +39,7 @@ def preparer_transitions(env):
     return transitions
 
 
-def evaluer_globalement(agent, transitions):
+def evaluer_globalement(agent, transitions, actions_politique=None):
     """Tester tous les départs avec argmax(Q), sans modifier l'environnement.
 
     Chaque état a un seul successeur sous la politique gloutonne. On mémorise
@@ -51,7 +51,8 @@ def evaluer_globalement(agent, transitions):
     penalite = limite + 1
     # Pour le DQN, les actions sont prédites par le réseau ; aucune Q-table.
     # Le Q-learning tabulaire conserve son comportement d'origine.
-    action_gloutonne = (agent.actions_gloutonnes()
+    action_gloutonne = (actions_politique if actions_politique is not None
+                        else agent.actions_gloutonnes()
                         if hasattr(agent, "actions_gloutonnes")
                         else agent.Q.argmax(axis=1))
 

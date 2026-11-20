@@ -1,43 +1,43 @@
 # Reinforcement Learning Robotics
 
-## Réseau Keras supervisé (version simple)
+## Q-learning puis réseau Keras supervisé
 
-Le fichier experiences/reseau_bras.py est indépendant du Q-learning
-précédent. Il reprend seulement le même bras (deux angles, neuf actions
-et la cible). Aucun code orienté objet personnel.
+Le script experiences/reseau_bras.py n'utilise plus le calcul géométrique
+des actions optimales. Il récupère ses étiquettes de notre Q-learning.
 
-Installer et exécuter depuis la racine du dépôt :
+1. Q-learning original pendant 5000 épisodes : 9 actions, récompense distance,
+   départs aléatoires, epsilon décroissant.
+2. Après CHAQUE épisode, tester la Q-table sur TOUS les 1294 départs,
+   sans epsilon et sans la modifier : réussite dans les 50 mouvements,
+   échec pénalisé à 51 mouvements.
+3. Conserver une COPIE de la Q-table dont le coût moyen pénalisé est
+   le plus faible. À égalité, préférer le plus grand nombre de réussites.
+4. Sauvegarder cette table dans experiences/q_tables/meilleure_q_9.npy.
+5. Transformer chaque état en deux angles et obtenir sa réponse par
+   argmax des neuf valeurs de la meilleure Q-table.
+6. Entraîner le réseau Keras 2 -> 64 -> 64 -> 9 à imiter ces réponses.
+   Les deux angles sont transmis directement, avec normalisation par 360.
+7. Tester les trajectoires du réseau sur tous les départs, afficher une
+   sortie one-hot et les deux graphiques de notre Q-learning.
+
+Installation depuis la racine du projet :
 
     py -m pip install -r requirements.txt
+
+Exécution :
+
     py -m experiences.reseau_bras
 
-Pour tester un autre état, modifier simplement à la fin du fichier :
+Modifier NB_EPISODES, NB_EPOQUES_RESEAU, THETA1 et THETA2 en haut du
+fichier pour changer les paramètres.
 
-    theta1, theta2 = 180, 90
+Attention : on choisit la meilleure Q-table OBSERVÉE pendant l'entraînement,
+pas nécessairement une table théoriquement optimale. Un réseau entraîné
+à l'imiter peut faire des erreurs ; sa politique est donc évaluée
+séparément. Les états d'entraînement servent aussi à l'évaluation,
+ce qui ne prouve pas la généralisation à de nouveaux états.
 
-Le réseau reçoit **directement deux nombres**, les deux angles en degrés
-(theta1, theta2). Aucune transformation en sinus/cosinus : Keras les divise
-seulement par 360 dans une couche Rescaling interne (pour faciliter
-l'apprentissage, sans changer le nombre d'entrées).
-
-Apprentissage supervisé, en trois étapes :
-
-1. Pour chaque position de notre grille (de 0 à 350 degrés par 10 degrés),
-   tester les neuf mouvements possibles et retenir celui qui minimise
-   le nombre de mouvements restant vers l'une des deux poses cibles.
-   En cas d'ex aequo, on choisit la première action de la liste.
-2. Entraîner un petit réseau Sequential : deux entrées, deux couches
-   Dense(64) et neuf sorties softmax, avec les indices d'actions corrects.
-3. Donner deux angles au réseau ; choisir l'indice avec argmax, puis afficher
-   un vecteur de neuf 0 et 1 contenant un seul 1 à cet indice.
-
-La dernière couche produit des probabilités ; le vecteur 0/1 est obtenu
-après argmax. Une prédiction du réseau n'est pas garantie optimale.
-
-Le pourcentage d'accord final est mesuré sur les mêmes positions que
-l'entraînement : ce n'est pas une évaluation sur de nouvelles données.
-
-## Ancien Q-learning, conservé séparément
+## Q-learning classique conservé
 
     py -m experiences.suivi_apprentissage
     py -m experiences.animation_bras
