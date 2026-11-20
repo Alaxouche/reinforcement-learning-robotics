@@ -26,3 +26,6 @@ experiences/q_tables/
 *.gif
 *.npy
 *.npz
+
+# Poids sauvegardés du DQN (résultats locaux, pas le code)
+experiences/modeles_dqn/

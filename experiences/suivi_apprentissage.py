@@ -49,7 +49,11 @@ def evaluer_globalement(agent, transitions):
     env = agent.env
     limite = agent.max_pas
     penalite = limite + 1
-    action_gloutonne = agent.Q.argmax(axis=1)
+    # Pour le DQN, les actions sont prédites par le réseau ; aucune Q-table.
+    # Le Q-learning tabulaire conserve son comportement d'origine.
+    action_gloutonne = (agent.actions_gloutonnes()
+                        if hasattr(agent, "actions_gloutonnes")
+                        else agent.Q.argmax(axis=1))
 
     successeurs = [
         transitions[etat][int(action_gloutonne[etat])]
@@ -135,14 +139,16 @@ def suivre(mode="distance", actions=9, episodes=5000, seed=42):
     return evaluations, agent.max_pas
 
 
-def tracer(evaluations, max_pas, mode, actions):
+def tracer(evaluations, max_pas, mode, actions, tous_les_points=False):
     """Deux séries d'observations sans lissage, avec la même Q-table testée."""
     numeros = [p[0] for p in evaluations]
     taux = [p[1] for p in evaluations]
     couts = [p[2] for p in evaluations]
 
     # Pour rester lisible, le taux de réussite est affiché tous les 500 épisodes.
-    points = [p for p in evaluations if p[0] % PAS == 0 or p[0] == numeros[-1]]
+    # DQN : afficher chaque mesure disponible ; Q-learning : tous les 500.
+    points = (evaluations if tous_les_points else
+              [p for p in evaluations if p[0] % PAS == 0 or p[0] == numeros[-1]])
     fig1, ax1 = plt.subplots(figsize=(9, 5), layout="constrained")
     ax1.plot([p[0] for p in points], [p[1] for p in points],
              "-o", linewidth=2)

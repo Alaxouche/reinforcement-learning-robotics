@@ -1,6 +1,6 @@
 # Reinforcement Learning Robotics
 
-Projet de Q-learning tabulaire sur deux environnements discrets :
+Projet de Q-learning tabulaire et de DQN PyTorch sur deux environnements :
 un bras robotique 2D et des labyrinthes (5 x 5, 36 x 36).
 
 ## Structure simplifiee
@@ -8,7 +8,8 @@ un bras robotique 2D et des labyrinthes (5 x 5, 36 x 36).
 ```text
 src/
   algorithmes/
-    q_learning.py                  # Q-learning, exploration epsilon-greedy
+    q_learning.py                  # Q-learning tabulaire
+    dqn.py                         # Réseau de neurones (PyTorch), replay et cible
   environnements/
     environnement_discret.py       # Interface des environnements
     bras_robotique/
@@ -21,7 +22,9 @@ src/
       labyrinthe_5x5.py
       labyrinthe_36x36.py
 experiences/
-  animation_bras.py                # Entrainement + animation du bras appris
+  animation_bras.py                # Animation du bras, Q-table de référence
+  suivi_apprentissage.py           # Courbes pour Q-learning tabulaire
+  dqn_bras.py                      # Entrainement, courbes et animation du DQN
 requirements.txt
 ```
 
@@ -104,3 +107,58 @@ Avec une autre configuration :
 ```bash
 py -m experiences.suivi_apprentissage --actions 4 --mode smart
 ```
+
+
+## Nouveau : DQN avec réseau de neurones PyTorch
+
+Le Q-learning tabulaire reste disponible pour servir de **référence**. Le DQN
+reprend exactement le même bras (4 ou 9 actions), les départs aléatoires,
+les fonctions de récompense `naive`, `smart`, `distance`, ainsi que
+l'exploration epsilon-greedy. Il n'utilise pas de Q-table.
+
+**Entrées du réseau** : cos(theta1), sin(theta1), cos(theta2), sin(theta2).
+**Architecture** : 4 -> 64 -> 64 -> 9 valeurs Q (ou 4 selon les actions).
+Le réseau apprend par descente de gradient sur les expériences mémorisées.
+Un réseau cible est utilisé pour rendre l'entraînement plus stable.
+
+Installer PyTorch et les dépendances :
+
+```powershell
+py -m pip install -r requirements.txt
+```
+
+Entraîner 5 000 épisodes et afficher les deux graphiques :
+
+```powershell
+py -m experiences.dqn_bras --episodes 5000
+```
+
+Les tests, sans epsilon, portent toujours sur tous les départs : taux de
+réussite (%) et coût moyen pénalisé (51 pour chaque échec). Ils sont
+effectués par défaut tous les 100 épisodes pour limiter le temps de calcul.
+Pour tester la politique après chaque épisode, comme dans l'étude tabulaire :
+
+```powershell
+py -m experiences.dqn_bras --episodes 5000 --eval-tous 1
+```
+
+Sauvegarder les poids et animer le bras avec le réseau appris :
+
+```powershell
+py -m experiences.dqn_bras --episodes 5000 --sauvegarder experiences/modeles_dqn/bras_distance_9.pt --animer
+```
+
+Recharger et animer sans réentraîner :
+
+```powershell
+py -m experiences.dqn_bras --charger experiences/modeles_dqn/bras_distance_9.pt --animer
+```
+
+Options : `--actions 4`, `--mode smart`, `--mode naive`, `--angles 180 90`,
+`--sans-graphes`, `--gif experiences/animations/bras_dqn.gif` et
+`--sans-fenetre` (avec `--gif`).
+
+Les fichiers `.pt` contiennent **uniquement les poids du réseau**, pas la
+mémoire de replay ou l'optimiseur : ils servent à l'évaluation et à
+l'animation, pas à reprendre exactement un entraînement interrompu.
+Les poids générés dans `experiences/modeles_dqn/` sont ignorés par Git.
