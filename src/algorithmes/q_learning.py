@@ -42,15 +42,19 @@ class QLearning:
             return int(np.random.choice(actions))
         return self.meilleure_action(etat)
 
-    def apprendre(self):
-        """Entraine la Q-table ; conserve l'acquis entre les episodes."""
+    def apprendre(self, suivi_episodes=None):
+        """Entraine Q ; un observateur facultatif reçoit (mouvements, réussite) par épisode."""
         for _ in range(self.nb_episodes):
             etat = self.env.reset()
+            mouvements = 0
+            reussi = False
             for _ in range(self.max_pas):
                 if not self.env.actions_possibles(etat):
                     break
                 action = self.choisir_action(etat)
                 nouvel_etat, recompense, termine = self.env.step(action)
+                mouvements += 1
+                reussi = bool(termine)
 
                 if termine:
                     valeur_future = 0.0
@@ -71,4 +75,6 @@ class QLearning:
             self.epsilon = max(
                 self.epsilon_min, self.epsilon * self.decroissance
             )
+            if suivi_episodes is not None:
+                suivi_episodes(mouvements, reussi)
         return self.Q

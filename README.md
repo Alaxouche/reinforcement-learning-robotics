@@ -77,17 +77,21 @@ py -m experiences.suivi_apprentissage
 
 Le programme reprend les **mêmes paramètres de Q-learning et d'epsilon dynamique**
 que l'animation (9 actions, récompense distance et 5 000 épisodes par défaut).
-Il mesure au départ puis tous les **500 épisodes** :
+Il mesure :
 
-- Le **taux de réussite** sur **toutes les positions de départ non terminales**,
-  avec au plus 50 mouvements par position.
-- Le **nombre moyen de mouvements des trajets réussis** ; ce nombre n'est pas
-  défini tant qu'aucune position ne réussit.
+- Au départ puis tous les **500 épisodes**, le **taux de réussite** sur
+  **toutes les positions de départ non terminales**, avec au plus 50 mouvements.
+- Le **nombre de mouvements réel à chaque épisode d'entraînement** jusqu'à
+  atteindre la cible (un point par épisode réussi). Les échecs sont marqués
+  séparément : ils ne sont pas comptés comme des réussites à 50 mouvements.
 
 Pendant chaque évaluation, le robot applique exclusivement `argmax(Q)` :
 pas d'exploration, pas de mise à jour de Q. L'entraînement reprend ensuite
 **sans réinitialiser la Q-table ni epsilon**. Les deux graphiques s'affichent
-à l'écran, sans lissage et sans créer de dossier de résultats.
+à l'écran, sans moyenne, sans lissage et sans créer de dossier de résultats.
+Attention : le deuxième montre les épisodes epsilon-greedy de l'entraînement :
+l'exploration et les départs aléatoires font naturellement varier leur longueur.
+Le premier évalue séparément la qualité de la politique apprise.
 
 Autre configuration :
 
