@@ -75,23 +75,32 @@ Depuis la racine du dépôt :
 py -m experiences.suivi_apprentissage
 ```
 
-Par défaut : 9 actions, récompense distance, 5 000 épisodes. Le Q-learning
-conserve **epsilon dynamique** et des **départs aléatoires d'entraînement**.
+Par défaut : bras à 9 actions, récompense distance, 5 000 épisodes.
+L'entraînement conserve **les départs aléatoires et l'epsilon dynamique**
+habituels.
 
-1. **Réussite globale de la politique** : à 0 puis tous les **500 épisodes**,
-   test glouton sur **tous les départs non terminaux**, avec au plus 50 pas.
-2. **Mouvements avant réussite depuis une pose fixe** : après **chaque épisode
-   d'entraînement**, rejouer la Q-table depuis **(180°, 90°)**, toujours sans
-   exploration. Un point = le nombre de mouvements réels lors de ce test.
-   Les échecs sont représentés séparément, sans les assimiler à 50 mouvements.
+**Après chaque épisode d'entraînement**, la Q-table actuelle est évaluée
+**sans epsilon** sur **tous les départs non terminaux**. On calcule :
 
-Les tests ne mettent jamais à jour Q ou epsilon et ne consomment pas d'aléatoire.
-On reprend chaque fois l'entraînement **avec la Q-table actuelle** et un
-nouveau départ aléatoire. Pas de moyenne, pas de lissage et pas de dossier
-de résultats.
+1. **Taux de réussite global** : affiché dans le premier graphique tous les
+   500 épisodes, avec 50 mouvements au maximum depuis chaque départ.
+2. **Coût moyen global en mouvements**, affiché à chaque épisode dans le
+   deuxième graphique. Un départ réussi coûte son nombre exact de mouvements.
+   Un départ échoué coûte **51 points de pénalité** (limite = 50).
+   Ainsi, aucune position difficile n'est écartée artificiellement du calcul.
 
-Pour choisir d'autres paramètres ou un autre départ fixe :
+L'indicateur est un **coût moyen pénalisé**, pas un nombre moyen de mouvements
+avant réussite tant que le taux de réussite est inférieur à 100 %. Quand
+toutes les positions réussissent, il devient la vraie moyenne des mouvements
+pour atteindre la cible.
+
+Les évaluations ne changent ni Q, ni epsilon, ni les tirages aléatoires.
+Elles utilisent les transitions déterministes du bras et mettent en cache
+les chemins pour éviter un temps de calcul prohibitif. Aucune recherche BFS,
+aucun lissage, aucun dossier de résultats.
+
+Avec une autre configuration :
 
 ```bash
-py -m experiences.suivi_apprentissage --actions 4 --mode smart --angles-test 180 90
+py -m experiences.suivi_apprentissage --actions 4 --mode smart
 ```
