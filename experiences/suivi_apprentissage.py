@@ -165,7 +165,7 @@ def tracer(evaluations, max_pas, mode, actions, tous_les_points=False):
         xlabel="Épisodes d'entraînement",
         ylabel=f"Mouvements moyens pénalisés (échec = {max_pas + 1})",
     )
-    ax2.set_xlim(0, numeros[-1])
+    ax2.set_xlim(0, max(1, numeros[-1]))  # un seul point si modèle rechargé
     ax2.set_ylim(0, max_pas + 2)
     ax2.grid(alpha=0.3)
     plt.show()
