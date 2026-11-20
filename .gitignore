@@ -1,4 +1,4 @@
-# Fichiers Python, environnements virtuels et caches
+# Python, environnements et caches
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -11,7 +11,7 @@ build/
 dist/
 *.egg-info/
 
-# Fichiers locaux / editeurs
+# Fichiers locaux / éditeurs
 .env
 .env.*
 !.env.example
@@ -20,12 +20,12 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Animations et Q-tables produites localement
+# Animations, Q-tables, réseaux entraînés produits localement
 experiences/animations/
 experiences/q_tables/
+experiences/modeles_reseau/
+experiences/modeles_dqn/
 *.gif
 *.npy
 *.npz
-
-# Poids sauvegardés du DQN (résultats locaux, pas le code)
-experiences/modeles_dqn/
+*.pt
