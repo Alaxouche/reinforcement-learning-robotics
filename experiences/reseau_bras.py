@@ -209,7 +209,8 @@ for nom, X, X_tous in comparaisons:
         position = np.array([[THETA1, THETA2]], dtype="float32")
         if nom == "trigo":
             position = transformer_angles(position)
-        probas = reseau.predict(position, verbose=0)[0]
+        probas = np.asarray(reseau.predict(position, verbose=0)[0], dtype=float)
+        probas /= probas.sum()  # Probabilites somme = 1 pour le tirage.
         a_max = int(np.argmax(probas))
         a_tiree = int(np.random.default_rng(42).choice(9, p=probas))
         print(f"  Etat ({THETA1}, {THETA2}) | probabilites : "
@@ -247,9 +248,10 @@ DOSSIER_GRAPHIQUES.mkdir(parents=True, exist_ok=True)
 # GRAPHE 1 : precision d'imitation de Q pendant les 200 epoques.
 fig, ax = plt.subplots(figsize=(9, 5), layout="constrained")
 for nom in historiques:
-    ax.plot(np.array(historiques[nom]["accuracy"]) * 100, label=nom)
+    epoques = np.arange(1, len(historiques[nom]["accuracy"]) + 1)
+    ax.plot(epoques, np.array(historiques[nom]["accuracy"]) * 100, label=nom)
 ax.set(title="Apprentissage : precision sur les exemples de la Q-table",
-       xlabel="Epoque (numero commencant a 0)",
+       xlabel="Epoque",
        ylabel="Actions predites correctement (%)")
 ax.set_ylim(0, 100)
 ax.grid(alpha=0.3)
@@ -259,9 +261,10 @@ fig.savefig(DOSSIER_GRAPHIQUES / "1_precision_entrainement.png", dpi=160)
 # GRAPHE 2 : fonction de perte (erreur) sur les exemples d'entrainement.
 fig, ax = plt.subplots(figsize=(9, 5), layout="constrained")
 for nom in historiques:
-    ax.plot(historiques[nom]["loss"], label=nom)
+    epoques = np.arange(1, len(historiques[nom]["loss"]) + 1)
+    ax.plot(epoques, historiques[nom]["loss"], label=nom)
 ax.set(title="Apprentissage : perte (entropie croisee)",
-       xlabel="Epoque (numero commencant a 0)",
+       xlabel="Epoque",
        ylabel="Perte sur les exemples d'entrainement")
 ax.grid(alpha=0.3)
 ax.legend()
