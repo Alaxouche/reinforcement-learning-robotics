@@ -24,8 +24,8 @@ Thumbs.db
 experiences/animations/
 experiences/q_tables/
 experiences/modeles_reseau/
-experiences/modeles_dqn/
 *.gif
 *.npy
 *.npz
+*.keras
 *.pt

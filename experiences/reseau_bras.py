@@ -1,36 +1,32 @@
-"""Entraîner un réseau état s -> vecteur one-hot d'action optimale.
+"""Entraîner un réseau Keras : état s -> vecteur one-hot de l'action.
 
-Lancer à la racine :
-  py -m experiences.reseau_bras
-  py -m experiences.reseau_bras --angles 180 90
-  py -m experiences.reseau_bras --animer
+Lancement depuis la racine du dépôt :
+    py -m experiences.reseau_bras --angles 180 90
+    py -m experiences.reseau_bras --angles 180 90 --animer
+    py -m experiences.reseau_bras --sauvegarder experiences/modeles_reseau/bras_9.keras
 """
 
 import argparse
-import torch
 
 from experiences.animation_bras import animer, position_depart, trajectoire_q
-from experiences.suivi_apprentissage import (
-    evaluer_globalement, preparer_transitions,
-)
+from experiences.suivi_apprentissage import evaluer_globalement, preparer_transitions
 from src.algorithmes.reseau_neurones import PolitiqueNeurones, distance_minimale
 from src.environnements.bras_robotique.bras_robot_distance import BrasRobotDistance
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Un état du bras -> une action sous forme d'un vecteur 0/1."
+        description="Réseau Keras supervisé : un état s -> une action one-hot."
     )
     parser.add_argument("--actions", type=int, choices=(4, 9), default=9)
-    parser.add_argument("--epoques", type=int, default=800)
+    parser.add_argument("--epoques", type=int, default=300)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--etat", type=int, help="État entier (de 0 à 1295).")
-    parser.add_argument("--angles", nargs=2, type=int,
-                        metavar=("THETA1", "THETA2"))
-    parser.add_argument("--charger", help="Utiliser un modèle déjà entraîné.")
-    parser.add_argument("--sauvegarder", help="Sauvegarder les poids (.pt).")
+    parser.add_argument("--angles", nargs=2, type=int, metavar=("THETA1", "THETA2"))
+    parser.add_argument("--charger", help="Recharger un modèle Keras (.keras).")
+    parser.add_argument("--sauvegarder", help="Sauvegarder le modèle (.keras).")
     parser.add_argument("--animer", action="store_true")
-    parser.add_argument("--gif", help="Exporter le trajet animé en GIF.")
+    parser.add_argument("--gif", help="Exporter la trajectoire sous forme de GIF.")
     parser.add_argument("--sans-fenetre", action="store_true")
     args = parser.parse_args()
 
@@ -43,17 +39,15 @@ def main():
     if args.epoques <= 0:
         parser.error("--epoques doit être positif.")
 
-    torch.set_num_threads(1)
     env = BrasRobotDistance(nb_actions=args.actions)
     agent = PolitiqueNeurones(env, seed=args.seed)
 
     if args.charger:
         agent.charger(args.charger)
-        print(f"Poids rechargés : {args.charger}")
+        print(f"Modèle Keras chargé : {args.charger}")
     else:
         bonnes, total = agent.entrainer(epoques=args.epoques)
-        print(f"Apprentissage supervisé : {bonnes}/{total} "
-              f"actions apprises correctement (sur les états d'entraînement).")
+        print(f"Précision sur les données d'entraînement : {bonnes}/{total} ")
         if args.sauvegarder:
             agent.sauvegarder(args.sauvegarder)
             print(f"Modèle enregistré : {args.sauvegarder}")
@@ -79,7 +73,7 @@ def main():
     print(f"Vecteur prédit = {vecteur}")
     print(f"Action i = {indice} : {env.noms_actions[indice]}")
 
-    # Comparaison de la politique apprise avec les trajets minimaux.
+    # Mesures de la politique Keras sur tous les départs, sans Q-table.
     transitions = preparer_transitions(env)
     reussis, total, taux, cout = evaluer_globalement(agent, transitions)
     cout_optimal = sum(distance_minimale(env, s) for s in env.etats_depart) / total
