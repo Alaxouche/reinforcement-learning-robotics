@@ -135,11 +135,11 @@ py -m experiences.dqn_bras --episodes 5000
 
 Les tests, sans epsilon, portent toujours sur tous les départs : taux de
 réussite (%) et coût moyen pénalisé (51 pour chaque échec). Ils sont
-effectués par défaut tous les 100 épisodes pour limiter le temps de calcul.
-Pour tester la politique après chaque épisode, comme dans l'étude tabulaire :
+effectués par défaut après chaque épisode, comme dans l'étude tabulaire.
+Pour accélérer l'entraînement en testant tous les 100 épisodes :
 
 ```powershell
-py -m experiences.dqn_bras --episodes 5000 --eval-tous 1
+py -m experiences.dqn_bras --episodes 5000 --eval-tous 100
 ```
 
 Sauvegarder les poids et animer le bras avec le réseau appris :

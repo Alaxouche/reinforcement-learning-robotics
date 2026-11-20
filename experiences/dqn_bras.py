@@ -24,7 +24,7 @@ from src.algorithmes.dqn import DQN
 
 
 def suivre_dqn(mode="distance", actions=9, episodes=5000, seed=42,
-                eval_tous=100, charger=None, sauvegarder=None):
+                eval_tous=1, charger=None, sauvegarder=None):
     """Entraîner et évaluer le réseau sur toutes les positions initiales."""
     if episodes <= 0 or eval_tous <= 0:
         raise ValueError("episodes et eval_tous doivent être positifs.")
@@ -40,8 +40,10 @@ def suivre_dqn(mode="distance", actions=9, episodes=5000, seed=42,
         # Test sans exploration ni apprentissage sur toutes les positions.
         reussis, total, taux, cout = evaluer_globalement(agent, transitions)
         evaluations.append((numero, taux, cout))
-        print(f"{numero:>7} | {reussis:>4}/{total:<4} | "
-              f"{taux:>7.2f} % | {cout:>8.2f} | {agent.epsilon:.3f}")
+        # Éviter 5 000 lignes dans le terminal si on teste chaque épisode.
+        if numero == 0 or numero % 500 == 0 or numero == episodes:
+            print(f"{numero:>7} | {reussis:>4}/{total:<4} | "
+                  f"{taux:>7.2f} % | {cout:>8.2f} | {agent.epsilon:.3f}")
 
     print(f"DQN — {actions} actions — {mode} — {episodes} épisodes")
     print("Épisode | Réussites   | Taux global | Coût pénalisé | Epsilon")
@@ -75,8 +77,8 @@ def main():
     parser.add_argument("--actions", type=int, choices=(4, 9), default=9)
     parser.add_argument("--episodes", type=int, default=5000)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--eval-tous", type=int, default=100,
-                        help="Tester tous les départs tous les N épisodes (1 = à chaque épisode).")
+    parser.add_argument("--eval-tous", type=int, default=1,
+                        help="Tester tous les départs tous les N épisodes (défaut : 1).")
     parser.add_argument("--charger", help="Charger les poids d'un réseau déjà entraîné.")
     parser.add_argument("--sauvegarder", help="Enregistrer les poids DQN (.pt).")
     parser.add_argument("--sans-graphes", action="store_true")
