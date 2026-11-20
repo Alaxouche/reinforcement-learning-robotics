@@ -22,10 +22,13 @@ Thumbs.db
 
 # Animations, Q-tables, réseaux entraînés produits localement
 experiences/animations/
-experiences/q_tables/
+experiences/q_tables/*
 experiences/modeles_reseau/
 *.gif
 *.npy
 *.npz
 *.keras
 *.pt
+
+# Exception : cette Q-table finale est une donnée de référence à conserver sur GitHub.
+!experiences/q_tables/meilleure_q_9.npy

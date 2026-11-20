@@ -1,10 +1,7 @@
-"""Comparer deux réseaux Keras entraînés sur la même meilleure Q-table.
+"""Comparer 4 méthodes neuronales avec UNE Q-table sauvegardée.
 
-Réseau A : (theta1, theta2) -> 9 actions
-Réseau B : (cos(theta1), sin(theta1), cos(theta2), sin(theta2)) -> 9 actions
-
-Si la Q-table sauvegardée existe, on l'utilise directement.
-Sinon, on la crée avec les 50 essais de Q-learning habituels.
+Aucune génération ni modification de Q ici !
+Le fichier meilleure_q_9.npy doit déjà exister.
 """
 
 from pathlib import Path
@@ -13,84 +10,36 @@ import keras
 import numpy as np
 
 from experiences.animation_bras import creer_agent
-from experiences.suivi_apprentissage import (
-    evaluer_globalement, preparer_transitions, tracer
-)
+from experiences.suivi_apprentissage import evaluer_globalement, preparer_transitions
 
-NB_ESSAIS = 50
-NB_EPISODES = 5000
 NB_EPOQUES_RESEAU = 200
-NB_REPETITIONS = 30  # Nombre de tests complets pour les tirages aléatoires.
+NB_REPETITIONS = 30
 THETA1, THETA2 = 180, 90
 
-DOSSIER_Q = Path("experiences/q_tables")
-CHEMIN_Q = DOSSIER_Q / "meilleure_q_9.npy"
+# Le chemin est relatif à ce fichier : fonctionne depuis n'importe quel dossier.
+CHEMIN_Q = Path(__file__).resolve().parent / "q_tables" / "meilleure_q_9.npy"
 
 
-# 1. Récupérer la meilleure Q-table, ou la générer si elle n'existe pas.
-agent = creer_agent(mode="distance", nb_actions=9, episodes=NB_EPISODES,
-                    seed=42, entrainer=False)
+# 1. Charger notre Q-table définitive. Ne JAMAIS relancer le Q-learning.
+if not CHEMIN_Q.is_file():
+    raise FileNotFoundError(
+        f"Q-table introuvable : {CHEMIN_Q}\n"
+        "Place ta Q-table enregistrée (meilleure_q_9.npy) dans ce dossier.\n"
+        "Le réseau ne régénère jamais la Q-table."
+    )
+
+agent = creer_agent(mode="distance", nb_actions=9, entrainer=False)
 env = agent.env
 transitions = preparer_transitions(env)
-historique_meilleur = None
 
-if CHEMIN_Q.exists():
-    meilleure_q = np.load(CHEMIN_Q, allow_pickle=False)
-    if meilleure_q.shape != agent.Q.shape or not np.isfinite(meilleure_q).all():
-        raise ValueError("La Q-table sauvegardée n'a pas la bonne taille.")
-    agent.Q = meilleure_q.copy()
-    n, total, taux, cout = evaluer_globalement(agent, transitions)
-    print(f"Q-table existante chargée : {n}/{total} réussites, "
-          f"moyenne {cout:.3f}")
-else:
-    tables = []
-    moyennes = []
-    reussites = []
+meilleure_q = np.load(CHEMIN_Q, allow_pickle=False)
+if meilleure_q.shape != agent.Q.shape or not np.isfinite(meilleure_q).all():
+    raise ValueError(f"Q-table invalide : attendu {agent.Q.shape} valeurs finies.")
 
-    for essai in range(NB_ESSAIS):
-        # Chaque essai repart d'une Q-table nulle et d'un epsilon initial.
-        agent = creer_agent(
-            mode="distance", nb_actions=9, episodes=NB_EPISODES,
-            seed=42 + essai, entrainer=False
-        )
-        evaluations = []
-
-        def apres_episode(_mouvements, _reussi):
-            # Tester TOUS les 1294 départs après chaque épisode.
-            n, total, taux, cout = evaluer_globalement(agent, transitions)
-            evaluations.append((len(evaluations) + 1, taux, cout))
-
-        agent.apprendre(suivi_episodes=apres_episode)
-
-        # Garder seulement la Q-table FINALE de cet entraînement.
-        tables.append(agent.Q.copy())
-        moyennes.append(evaluations[-1][2])
-        reussites.append(round(evaluations[-1][1] * len(env.etats_depart) / 100))
-
-        if essai == 0:
-            historiques = []
-        historiques.append(evaluations)
-
-        print(f"Essai {essai + 1:02d}/{NB_ESSAIS} : "
-              f"{reussites[-1]}/{len(env.etats_depart)} réussites | "
-              f"moyenne finale {moyennes[-1]:.3f}")
-
-    meilleur = int(np.argmin(moyennes))
-    meilleure_q = tables[meilleur]
-    historique_meilleur = historiques[meilleur]
-    agent.Q = meilleure_q.copy()
-
-    DOSSIER_Q.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(
-        DOSSIER_Q / "50_q_tables.npz",
-        tables=np.array(tables),
-        moyennes=np.array(moyennes),
-        reussites=np.array(reussites),
-    )
-    np.save(CHEMIN_Q, meilleure_q)
-    print(f"\nMeilleure Q-table : essai {meilleur + 1} "
-          f"(moyenne finale {moyennes[meilleur]:.3f})")
-
+agent.Q = meilleure_q.copy()
+n, total, taux, cout = evaluer_globalement(agent, transitions)
+print(f"Q-table sauvegardée chargée : {CHEMIN_Q.name}")
+print(f"Réussites : {n}/{total} | coût moyen pénalisé : {cout:.3f}")
 
 # 2. Même liste d'états et mêmes actions attendues pour les deux réseaux.
 departs = np.array(env.etats_depart)
@@ -225,7 +174,3 @@ for nom, methode, taux, cout, ecart in resultats:
     ecart_texte = "-" if ecart is None else f"{ecart:.3f}"
     print(f"{nom:<8} {methode:<9} {taux:>7.2f}%      "
           f"{cout:>8.3f}     {ecart_texte}")
-
-# Afficher les graphiques Q-learning si l'on a généré les 50 Q-tables.
-if historique_meilleur is not None:
-    tracer(historique_meilleur, agent.max_pas, "distance", 9)
